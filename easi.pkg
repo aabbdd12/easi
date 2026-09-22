@@ -1,0 +1,37 @@
+* 22sep2026
+v 3
+d {bf:easi : the Exact Affine Stone Index demand system in Stata}
+d
+d easi estimates the EASI demand system of Lewbel and Pendakur (2009) entirely
+d within Stata and Mata: iterated restricted 3SLS with Slutsky symmetry, the
+d implicit utility index, expenditure, price (compensated and uncompensated) and
+d demographic elasticities with delta-method standard errors, sampling weights,
+d robust, cluster and survey-design (svyset) variance, predict, estat engel, and
+d a pre-estimation diagnostic, easidiag, that detects the causes of slow or
+d failed convergence before any estimation is run.  sr_easi is kept as a
+d backward-compatible wrapper.
+d
+d Author  : {bf:Abdelkrim Araar}, Universite Laval / PEP
+d Email   : {browse "mailto:aabd@ecn.ulaval.ca":aabd@ecn.ulaval.ca}
+d
+d Distribution-Date: 20260922
+d Stata Version : 14.2 and higher (tables use -collect- from 17, -matlist- below)
+d
+d Ancillary files (net get easi): hixdata.dta, the reference data of Lewbel
+d and Pendakur (2009); mex_bench.dta, a reduced Mexican expenditure survey
+d (ENIGH 2014, cereals) with a stratified two-stage design already svyset;
+d a guided tour; and a script that prepares hixdata for the dialog.
+d
+f src/easi.ado
+f src/easi_p.ado
+f src/easi_estat.ado
+f src/easi.sthlp
+f src/easi.dlg
+f src/easidiag.ado
+f src/easidiag.sthlp
+f src/sr_easi.ado
+f src/sr_easi_estat.ado
+f examples/hixdata.dta
+f examples/mex_bench.dta
+f examples/easi_tour.do
+f examples/hixdata_for_dialog.do

@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use easi, please cite it as below."
+title: "Estimating the Exact Affine Stone Index demand system: the easi Stata module"
+type: software
+authors:
+  - family-names: Araar
+    given-names: Abdelkrim
+    affiliation: "Université Laval / PEP"
+    email: aabd@ecn.ulaval.ca
+version: "1.0.0"
+date-released: "2026-09-22"
+repository-code: "https://github.com/aabbdd12/easi"
+keywords:
+  - demand systems
+  - EASI
+  - implicit Marshallian demands
+  - elasticities
+  - three-stage least squares
+  - survey design
+  - Stata
+license: "TBD"
+references:
+  - type: article
+    title: "Tricks with Hicks: the EASI demand system"
+    authors:
+      - family-names: Lewbel
+        given-names: Arthur
+      - family-names: Pendakur
+        given-names: Krishna
+    journal: "American Economic Review"
+    volume: 99
+    year: 2009
+    start: 827
+    end: 863

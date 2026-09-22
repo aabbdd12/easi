@@ -1,0 +1,339 @@
+
+
+
+
+VERSION 14.0
+SYNCHRONOUS_ONLY 
+
+INCLUDE graph_header
+//INCLUDE header
+POSITION . . 790 400
+DIALOG main, label(" WELCOM| Price Elasticity | EASI model --> easi command") tabtitle("Main")
+
+BEGIN
+
+   GROUPBOX chk_act   10    10  380 55,                          ///
+            label("What to run")
+
+   TEXT     tx_action    20    +22   110      .,                   ///
+            label("Action:")
+
+   COMBOBOX cb_action   130     @    250      .,                   ///
+            dropdownlist onselchangelist(action_change)            ///
+            contents(actlist) values(actvals) default(1)
+
+ GROUPBOX intvar 10     +40    380  250,                      ///
+             label("Data and variables of the model")
+  
+  
+	
+		
+TEXT   tx_share      20      +25   220   .,                      ///
+        label("Expenditure shares*:")
+  
+VARLIST name_items   20      +20   360       .,                      ///
+        label("") 
+  
+ TEXT   tx_price      20      +25   220   .,                      ///
+        label("Prices*:")
+		
+  
+VARLIST  name_prices   20      +20   360       .,                      ///
+        label("") option(prices)
+		
+		
+   TEXT tx_hhexp      20      +30   140   .,                      ///
+        label("HH expenditures*:")
+		
+VARNAME vn_hhexp   150      @   230       .,                      ///
+        label("") option(expenditure)
+		
+
+ TEXT   tx_inddemo      20     +30   260   .,                      ///
+        label("Demographic variables:")
+  
+  
+VARLIST  vl_inddemo   20       +20   360       .,   ///
+  option(demographics)
+ 
+ 
+   TEXT   tx_sitems      20      +25   220   .,                      ///
+        label("Short names of items:")
+		
+  
+  EDIT name_snames   20      +20   360       .,                      ///
+        label("") option(snames)
+
+  
+  GROUPBOX percentile 400    10    380 140,                      ///
+           label("The model parameter(s)")
+ 
+ TEXT    tx_power      410     +20   120   .,                      ///
+        label("Power of the EASI model:")
+ 
+ SPINNER  sp_pow    550       @      60    .,                    /*
+                */ min(1) default(5) max(20)                            /*
+                */ option(power)
+
+  CHECKBOX ck_inpy  410     +25    360  .,                           /*
+                */ label("Interaction between prices and income")      /*
+                */ option("inpy")                                      /*
+                */
+				
+  CHECKBOX ck_inpz  410     +25    360  .,                           /*
+                */ label("Interaction between prices and demographics")      /*
+                */ option("inpz")                                      /*
+                */
+				 
+  CHECKBOX ck_inzy  410     +25    360  .,                           /*
+                */ label("Interaction between demographics and income")      /*
+                */ option("inzy")                                      /*
+                */
+
+   GROUPBOX chk_vce  400    +40  380 60,                         ///
+            label("Standard errors: ")
+
+  TEXT    tx_vce      410     +25   120   .,                      ///
+        label("Variance estimator:")
+
+  COMBOBOX cb_vce   550      @      200   .,                      ///
+        dropdownlist  option("vce")                               ///
+        contents(vcelist) values(vcevals) default("robust")
+
+  
+  
+  
+  
+ 
+	/*
+     GROUPBOX sample 410     10    360  140,                      ///
+             label("Other explanatory variables of the model")
+		*/	 
+   DEFINE _x 20
+   DEFINE _y 240
+   
+     TEXT tx_Note      20      380   250   .,                      ///
+        label("Note(s): the (*) indicates a required information.")
+     
+
+
+
+END
+
+
+
+
+
+
+DIALOG resop,  tabtitle("Results")
+
+BEGIN
+                                        
+SPINNER  sp_dec    10       25      50    .,                    /*
+                */ label("Decimals")                            /*
+                */ min(0) default(3) max(12)                            /*
+                */ option(dec)
+
+TEXT     sp_txt  70      25      140      .,                            /*
+                */ label("Number of decimals")  
+
+                              
+  CHECKBOX ck_dregres 10     +40    200  .,                           /*
+                */ label("Display regression results")               /*
+                */ option("dregres")                                 /*
+                */
+
+ CHECKBOX ck_dislas 10     +40    200  .,                           /*
+                */ label("Display the results of the last item")               /*
+                */ option("dislas")  default(1)                                 /*
+                */
+
+ CHECKBOX ck_comp   10     +30    360  .,                           /*
+                */ label("Add compensated (Hicksian) price elasticities")     /*
+                */ option("compensated")
+
+ CHECKBOX ck_demoel 10     +25    360  .,                           /*
+                */ label("Add demographic elasticities")                      /*
+                */ option("demoelast")
+
+ CHECKBOX ck_checks 10     +25    360  .,                           /*
+                */ label("Show the aggregation identities")                   /*
+                */ option("checks")
+
+ CHECKBOX ck_noese  10     +25    360  .,                           /*
+                */ label("Skip the elasticity standard errors and their tables") /*
+                */ option("noelastse")
+
+// Saving the elasticity tables to a file (Excel, via -collect export-) is
+// planned for a later version.  The control is kept here, commented out,
+// together with its enable/disable calls and its optionarg below.
+//  TEXT  tx_eldecfile     10    +60    140      .,                 ///
+//  label("Save the elasticity file:")
+//  FILE  eldecfile      140   @     270      .,                    ///
+//  label ("Browse...")    save option("xfil")                   ///
+//  filter("MetaFile (*.xml)*.xml*.* (*.*)*.*")
+
+
+END
+
+
+
+LIST actlist
+BEGIN
+1 - Estimation
+2 - Diagnostic
+END
+
+LIST actvals
+BEGIN
+est
+diag
+END
+
+// one entry per combobox item, in order
+LIST action_change
+BEGIN
+        script mode_est
+        script mode_diag
+END
+
+LIST vcelist
+BEGIN
+	robust
+	conventional
+END
+
+LIST vcevals
+BEGIN
+	robust
+	conventional
+END
+
+// -easidiag- uses none of the reporting or variance controls.  Leaving them
+// live under the diagnostic would let the user fill boxes that are then
+// dropped without a word, which is the silent failure this module avoids
+// everywhere else, so they are greyed out instead.
+SCRIPT mode_est
+BEGIN
+        has_diag.setfalse
+        program set_action_mode
+END
+
+SCRIPT mode_diag
+BEGIN
+        has_diag.settrue
+        program set_action_mode
+END
+
+PROGRAM set_action_mode
+BEGIN
+        if has_diag {
+                call main.tx_vce.disable
+                call main.cb_vce.disable
+                call resop.sp_dec.disable
+                call resop.sp_txt.disable
+                call resop.ck_dregres.disable
+                call resop.ck_dislas.disable
+                call resop.ck_comp.disable
+                call resop.ck_demoel.disable
+                call resop.ck_checks.disable
+                call resop.ck_noese.disable
+//              call resop.tx_eldecfile.disable
+//              call resop.eldecfile.disable
+        }
+        if !has_diag {
+                call main.tx_vce.enable
+                call main.cb_vce.enable
+                call resop.sp_dec.enable
+                call resop.sp_txt.enable
+                call resop.ck_dregres.enable
+                call resop.ck_dislas.enable
+                call resop.ck_comp.enable
+                call resop.ck_demoel.enable
+                call resop.ck_checks.enable
+                call resop.ck_noese.enable
+//              call resop.tx_eldecfile.enable
+//              call resop.eldecfile.enable
+        }
+END
+
+SCRIPT PREINIT
+BEGIN
+create BOOLEAN has_ini
+create BOOLEAN has_diag                         
+END
+
+
+PROGRAM POSTINIT_PROGRAM
+BEGIN
+        put "aeasi2"
+        stata hidden
+END
+
+
+
+HELP hlp1,   view("help easi")
+RESET res1
+OK      ok1,      label("OK")
+CANCEL can1, label("Cancel")
+SUBMIT sub1, label("Submit")
+COPY  copy1,
+
+PROGRAM command
+BEGIN
+        if has_diag {
+                put "easidiag "
+        }
+        if !has_diag {
+                put "easi "
+        }
+        require  main.name_items
+        varlist [main.name_items]
+      
+
+        beginoptions  
+        put " "
+        optionarg main.name_prices
+		optionarg main.name_snames
+		optionarg main.vn_hhexp
+		
+        optionarg main.vl_inddemo
+		
+	if !has_diag {
+                        if !resop.sp_dec.isdefault() {
+                        optionarg resop.sp_dec
+                        }
+						
+                optionarg resop.ck_dregres 
+				optionarg resop.ck_dislas
+//              optionarg resop.eldecfile
+		if resop.ck_comp {
+			put " compensated"
+		}
+		if resop.ck_demoel {
+			put " demoelast"
+		}
+		if resop.ck_checks {
+			put " checks"
+		}
+		if resop.ck_noese {
+			put " noelastse"
+		}
+	}
+				
+				optionarg main.sp_pow
+				optionarg main.ck_inpy
+				optionarg main.ck_inpz
+				optionarg main.ck_inzy
+		if !has_diag {
+			if !main.cb_vce.isdefault() {
+				optionarg main.cb_vce
+			}
+		}
+
+                                       
+        endoptions
+        
+        
+        
+END
