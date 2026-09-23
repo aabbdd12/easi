@@ -60,6 +60,12 @@ itself the statement that the note's numbers reproduce.
 
 ## The R reference (`R_reference/`)
 
+`easi_hixdata.R` is the reference model on hixdata with the R package and
+nothing else — the vignette specification, the three elasticity families,
+the running time — for a reader who wants to see the package itself run (it
+uses the compiled package under R 3.4.4 when `check_binary_r34.R` has
+installed it, and sources the package's functions otherwise).
+
 `out/R_*.csv` is the frozen output of the R package `easi` 0.21 on the
 vignette specification, at full double precision, against which the
 `SectionA1_*` scripts lock the `compat` mode. It was produced by
