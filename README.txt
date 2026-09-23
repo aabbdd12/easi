@@ -77,8 +77,13 @@ run of replication/master.do is the statement that the note reproduces.
 
 Citing
 
-If you use easi, please cite the technical note (see CITATION.cff; the Zenodo
-DOI is on the release page) and
+If you use easi, please cite the technical note,
+
+Araar, A. (2026). Estimating the Exact Affine Stone Index demand system: the
+easi Stata module. Zenodo. https://doi.org/10.5281/zenodo.22914059
+
+(this version; the DOI 10.5281/zenodo.22914058 covers all versions and
+resolves to the latest one — see CITATION.cff), and the model's paper,
 
 Lewbel, A., and K. Pendakur. 2009. Tricks with Hicks: the EASI demand system.
 American Economic Review 99: 827–863.
