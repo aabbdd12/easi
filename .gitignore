@@ -2,15 +2,15 @@
 *.log
 !tests/out/*.log
 !replication/R_reference/*.log
-docs/*.aux
-docs/*.out
-docs/*.toc
-docs/*.synctex.gz
+paper/*.aux
+paper/*.out
+paper/*.toc
+paper/*.synctex.gz
 examples/tempa.dta
 examples/tempclus.dta
 examples/myfile.xml
 examples/*.gph
-docs/fig/*.gph
+paper/fig/*.gph
 
 # the WELCOM toolkit is a separate product; easi is published on its own
 Installer/
@@ -22,11 +22,11 @@ easi/
 /sr_easi.dlg
 /sr_easi.hlp
 # the note is shipped as a PDF only; its sources, tables and figures stay local
-docs/archive/
-docs/audit_R_vs_easi.md
-docs/*.tex
-docs/fig/
-docs/*.png
+paper/archive/
+paper/audit_R_vs_easi.md
+paper/*.tex
+paper/fig/
+paper/*.png
 examples/*.png
 examples/*.duvm
 examples/hixdata_levels.dta

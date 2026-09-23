@@ -1,7 +1,7 @@
 # Replication files for *Estimating the Exact Affine Stone Index demand system: the easi Stata module*
 
 Every table, figure and number reported in the technical note
-(`../docs/easi_technical_note.pdf`) is produced by the scripts in this
+(`../paper/easi_technical_note.pdf`) is produced by the scripts in this
 folder, from the two data sets shipped in `../examples/` and the module in
 `../src/`. Scripts are named after what they reproduce: `Table1.do` prints
 Table 1 in the note's layout, `Table8_9_10_Figure1.do` produces the results

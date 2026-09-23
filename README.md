@@ -24,7 +24,7 @@ within Stata and Mata. No R, no external dependency.
 
 Every variance is validated against a bootstrap of the whole procedure under
 simple random sampling, sampling weights and a stratified cluster design. The
-technical note in `docs/` gives the model, the estimator, the elasticity
+technical note in `paper/` gives the model, the estimator, the elasticity
 formulas and the validation.
 
 ## Installation
@@ -69,7 +69,7 @@ examples/     hixdata.dta (Lewbel and Pendakur's reference data),
               design, already svyset), easi_tour.do (guided tour on hixdata),
               mex_tour.do (the survey-design features on the Mexican data),
               hixdata_for_dialog.do
-docs/         the technical note (PDF)
+paper/        the technical note (PDF)
 replication/  every table and figure of the note, one script each, with a
               master.do and a README that maps them; the frozen output of the
               R package and the R scripts that produced and re-checked it
