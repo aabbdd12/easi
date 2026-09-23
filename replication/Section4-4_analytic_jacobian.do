@@ -39,7 +39,7 @@ set more off
 * Every script locates the module (../src), the data (../examples) and the
 * frozen R reference (R_reference/out) relative to the current directory:
 *     cd <path-to-repository>/replication
-*     do 08_analytic_jacobian.do
+*     do Section4-4_analytic_jacobian.do
 * Nothing needs to be edited.  The check below stops with a clear message
 * when the working directory is not replication/.
 capture confirm file "master.do"

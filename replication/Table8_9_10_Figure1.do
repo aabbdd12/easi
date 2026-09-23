@@ -7,7 +7,7 @@
 *!   out/engel_atmeans.pdf/.gph    Figure 1, top panel
 *!   out/engel_asobserved.pdf/.gph Figure 1, bottom panel
 *!
-*! Run from the replication/ directory:  do 11_hixdata_results.do
+*! Run from the replication/ directory:  do Table8_9_10_Figure1.do
 
 clear all
 set more off
@@ -16,7 +16,7 @@ set linesize 100
 * Every script locates the module (../src), the data (../examples) and the
 * frozen R reference (R_reference/out) relative to the current directory:
 *     cd <path-to-repository>/replication
-*     do 11_hixdata_results.do
+*     do Table8_9_10_Figure1.do
 * Nothing needs to be edited.  The check below stops with a clear message
 * when the working directory is not replication/.
 capture confirm file "master.do"
@@ -45,6 +45,7 @@ function wcsv(string scalar f, string scalar m) {
 	real matrix M; string vector rn, cn; real scalar fh, i, j; string scalar s
 	M = st_matrix(m)
 	rn = st_matrixrowstripe(m)[,2]; cn = st_matrixcolstripe(m)[,2]
+	unlink(f)				// fopen(, "w") refuses to overwrite
 	fh = fopen(f, "w")
 	fput(fh, "," + invtokens(cn', ","))
 	for (i = 1; i <= rows(M); i++) {

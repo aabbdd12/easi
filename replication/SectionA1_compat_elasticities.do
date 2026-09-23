@@ -8,7 +8,7 @@ set more off
 * Every script locates the module (../src), the data (../examples) and the
 * frozen R reference (R_reference/out) relative to the current directory:
 *     cd <path-to-repository>/replication
-*     do 01b_compat_lock_elasticities.do
+*     do SectionA1_compat_elasticities.do
 * Nothing needs to be edited.  The check below stops with a clear message
 * when the working directory is not replication/.
 capture confirm file "master.do"

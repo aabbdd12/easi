@@ -7,7 +7,7 @@
 *!   D. hixdata, the reference specification
 *!
 *! Produces out/easidiag_cases.log, the reports quoted in the note.
-*! Run from the replication/ directory:  do 12_easidiag_cases.do
+*! Run from the replication/ directory:  do Table6.do
 
 clear all
 set more off
@@ -16,7 +16,7 @@ set linesize 100
 * Every script locates the module (../src), the data (../examples) and the
 * frozen R reference (R_reference/out) relative to the current directory:
 *     cd <path-to-repository>/replication
-*     do 12_easidiag_cases.do
+*     do Table6.do
 * Nothing needs to be edited.  The check below stops with a clear message
 * when the working directory is not replication/.
 capture confirm file "master.do"
