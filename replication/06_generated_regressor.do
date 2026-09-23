@@ -227,6 +227,19 @@ void _st11(string scalar svars, string scalar lpvars, string scalar lxvar,
 }
 end
 
+* ---- run this from the replication/ directory ----------------------------
+* Every script locates the module (../src), the data (../examples) and the
+* frozen R reference (R_reference/out) relative to the current directory:
+*     cd <path-to-repository>/replication
+*     do 06_generated_regressor.do
+* Nothing needs to be edited.  The check below stops with a clear message
+* when the working directory is not replication/.
+capture confirm file "master.do"
+if _rc {
+	di as error "run this script from the replication/ directory:"
+	di as error "    cd <path-to-repository>/replication"
+	exit 601
+}
 local ROOT = subinstr("`c(pwd)'", "\", "/", .) + "/.."
 adopath ++ "`ROOT'/src"
 

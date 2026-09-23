@@ -19,6 +19,19 @@
 clear all
 set more off
 
+* ---- run this from the replication/ directory ----------------------------
+* Every script locates the module (../src), the data (../examples) and the
+* frozen R reference (R_reference/out) relative to the current directory:
+*     cd <path-to-repository>/replication
+*     do 05b_elasticity_se_bootstrap.do
+* Nothing needs to be edited.  The check below stops with a clear message
+* when the working directory is not replication/.
+capture confirm file "master.do"
+if _rc {
+	di as error "run this script from the replication/ directory:"
+	di as error "    cd <path-to-repository>/replication"
+	exit 601
+}
 local ROOT = subinstr("`c(pwd)'", "\", "/", .) + "/.."
 adopath ++ "`ROOT'/src"
 
