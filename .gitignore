@@ -30,6 +30,7 @@ examples/*.png
 examples/*.duvm
 examples/hixdata_levels.dta
 
-# the test suite, the frozen R reference and the R sources stay local;
-# the repository ships the module, the examples and the note
+# the test suite stays local; replication/ carries it under descriptive
+# names, together with the frozen R reference.  Its outputs are regenerated.
 tests/
+replication/out/

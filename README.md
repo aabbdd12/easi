@@ -64,17 +64,21 @@ easidiag w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) p
 ```
 src/        the command: easi.ado, easi_p.ado, easi_estat.ado, easi.sthlp,
             easi.dlg, easidiag.ado, easidiag.sthlp, sr_easi.ado, sr_easi_estat.ado
-examples/   hixdata.dta (Lewbel and Pendakur's reference data),
-            mex_bench.dta (a reduced Mexican survey, stratified two-stage
-            design, already svyset), easi_tour.do (guided tour),
-            hixdata_for_dialog.do
-docs/       the technical note (PDF)
+examples/     hixdata.dta (Lewbel and Pendakur's reference data),
+              mex_bench.dta (a reduced Mexican survey, stratified two-stage
+              design, already svyset), easi_tour.do (guided tour on hixdata),
+              mex_tour.do (the survey-design features on the Mexican data),
+              hixdata_for_dialog.do
+docs/         the technical note (PDF)
+replication/  every table and figure of the note, one script each, with a
+              master.do and a README that maps them; the frozen output of the
+              R package and the R scripts that produced and re-checked it
 stata.toc, easi.pkg    net-install manifest
 ```
 
-The test suite, the frozen output of the R package, the R sources used to
-produce it and the LaTeX sources of the note are kept outside the repository;
-the note's Appendix B lists what the tests verify.
+The module's test suite and the LaTeX sources of the note are kept outside the
+repository; `replication/` carries the tests under descriptive names, so a
+clean run of `replication/master.do` is the statement that the note reproduces.
 
 ## Citing
 
