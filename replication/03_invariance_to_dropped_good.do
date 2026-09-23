@@ -123,4 +123,35 @@ matlist CMS, format(%9.5f) twidth(10)
 
 di as txt "{hline 76}"
 
+* ---- the same comparison with Sigma formed once (systemfit / reg3) ---------
+* legacy(sigma1) takes one GLS step instead of iterating Sigma to
+* convergence; this is the "one-step" column of Table 1 in the note.
+qui easi `SHA', lnprices(`PRA') `OPT' legacy(sigma1)
+matrix IA1 = e(elast_income)
+matrix PA1 = e(elast_price)
+qui easi `SHB', lnprices(`PRB') `OPT' legacy(sigma1)
+matrix IB1 = e(elast_income)
+matrix PB1 = e(elast_price)
+mata:
+    pm  = (9, 2, 3, 4, 5, 6, 7, 8, 1)
+    st_numscalar("dI1", max(abs(st_matrix("IA1") - st_matrix("IB1")[., pm])))
+    st_numscalar("dP1", max(abs(st_matrix("PA1") - st_matrix("PB1")[pm, pm])))
+end
+
+* ---- Table 1 of the note, in its layout --------------------------------------
+di ""
+di as txt "  Table 1 -- Invariance to the dropped good."				///
+	" hixdata, J = 9, R = 3, no interactions."
+di as txt "  {hline 74}"
+di as txt "  maximum change on permuting the goods" _col(48) "one-step Sigma"	///
+	_col(64) "iterated Sigma"
+di as txt "  {hline 74}"
+di as txt "  expenditure elasticities" _col(48) as res %9.1e dI1 _col(64) %9.1e dI
+di as txt "  price elasticities"       _col(48) as res %9.3f dP1 _col(64) %9.1e dP
+di as txt "  {hline 74}"
+di as txt "  dropped good, recovered vs. directly estimated (iterated Sigma)"
+di as txt "  spers: elasticity"  _col(48) as res %8.5f IA[1,9]  as txt " vs. " as res %8.5f IB[1,1]
+di as txt "  spers: std. error" _col(48) as res %8.5f ISA[1,9] as txt " vs. " as res %8.5f ISB[1,1]
+di as txt "  {hline 74}"
+
 log close ta
