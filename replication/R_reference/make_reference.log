@@ -1,0 +1,49 @@
+Messages d'avis :
+1: le package 'Matrix' a été compilé avec la version R 4.3.1 
+2: le package 'haven' a été compilé avec la version R 4.3.1 
+max |sum(shares) - 1| = 4.936e-08 
+spec: y.power=5 py=TRUE zy=TRUE pz=TRUE interpz=1:5
+
+ *** Please wait during the creation of final instruments... ***  
+iteration =  1 
+crit_test =  0.02657621 
+iteration =  2 
+crit_test =  2.427126e-05 
+iteration =  3 
+crit_test =  1.858946e-08 
+
+ *** Creation of final instruments successfully completed... *** 
+
+ *** Please wait during the estimation... *** 
+iteration =  1 
+crit_test =  1 
+iteration =  2 
+crit_test =  2.059806e-05 
+iteration =  3 
+crit_test =  1.692814e-08 
+
+ *** Estimation successfully completed *** 
+estimation elapsed: 45.8 s
+
+--- reference written to C:\Users\aabd\OneDrive\Desktop\EASI_project/tests/out ---
+          [,1]                 
+n         "4847"               
+ngoods    "9"                  
+neq       "8"                  
+nsoc      "5"                  
+y_power   "5"                  
+py_inter  "TRUE"               
+zy_inter  "TRUE"               
+pz_inter  "TRUE"               
+ncoef     "320"                
+k_per_eq  "40"                 
+elapsed_s "45.81"              
+R_version "4.3.0"              
+systemfit "1.1.30"             
+stamp     "2026-09-21 09:50:13"
+
+income elasticities:
+        foodh    foodr     rent     oper     furn    cloth   tranop     recr
+[1,] 0.563009 1.458831 0.725668 0.985726 2.015311 1.606549 0.838825 1.723361
+       others
+[1,] 1.095936

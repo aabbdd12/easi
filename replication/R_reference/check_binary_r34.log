@@ -1,0 +1,14 @@
+R version 3.4.4 (2018-03-15) 
+easi 0.21 | systemfit 1.1.22 
+time: 42.97857 secs 
+interpz requested 1:5 ; est$interpz stored = 1 
+coefficients per equation: 40 
+eq1 price x demographic terms: eq1_z1*ps1 eq1_z1*ps2 eq1_z1*ps3 eq1_z1*ps4 eq1_z1*ps5 eq1_z1*ps6 eq1_z1*ps7 eq1_z1*ps8 
+  coef table         max |binary - frozen| = 2.58e-09
+  elast_income       max |binary - frozen| = 2.62e-11
+  elast_income_se    max |binary - frozen| = 1.15e-13
+  elast_price        max |binary - frozen| = 1.19e-09
+  elast_price_se     max |binary - frozen| = 5.15e-12
+  elast_demo         max |binary - frozen| = 6.07e-12
+  elast_demo_se      max |binary - frozen| = 2.84e-15
+income SE of the last good (binary): -1.019 

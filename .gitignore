@@ -1,6 +1,7 @@
 # Stata / LaTeX build artefacts and scratch output
 *.log
 !tests/out/*.log
+!replication/R_reference/*.log
 docs/*.aux
 docs/*.out
 docs/*.toc

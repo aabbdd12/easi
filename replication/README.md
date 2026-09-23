@@ -70,7 +70,11 @@ package, unmodified, under R 3.4.4 and compares every table with the frozen
 reference (2.6e-9 on the coefficients, 1e-9 to 1e-15 on the elasticity
 tables); it also shows two of the package's defects directly in its output.
 Neither R script is needed to reproduce the note: the frozen CSV files are
-what the Stata scripts read.
+what the Stata scripts read. The logs of both runs are kept beside them
+(`make_reference.log`, `check_binary_r34.log`); they carry the R running
+times quoted in Section 7.6 of the note — 45.8 s under R 4.3.0, 43 to 46 s
+for the compiled package under R 3.4.4, on the same machine as the Stata
+timings.
 
 ## Data
 
