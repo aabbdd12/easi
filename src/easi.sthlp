@@ -593,8 +593,12 @@ CIRPEE working paper.{p_end}
 
 {title:Author}
 
-{pstd}Abdelkrim Araar{break}
+{pstd}Abdelkrim Araar, Universite Laval / PEP{break}
 {browse "mailto:aabd@ecn.ulaval.ca":aabd@ecn.ulaval.ca}{p_end}
+
+{pstd}Version 1.0.0, 23 September 2026.  License: GPL-3.0-or-later.
+Source, examples, technical note and replication files:
+{browse "https://github.com/aabbdd12/easi"}{p_end}
 
 
 {title:Also see}

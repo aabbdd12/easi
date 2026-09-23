@@ -8,7 +8,7 @@ authors:
     affiliation: "Université Laval / PEP"
     email: aabd@ecn.ulaval.ca
 version: "1.0.0"
-date-released: "2026-09-22"
+date-released: "2026-09-23"
 repository-code: "https://github.com/aabbdd12/easi"
 keywords:
   - demand systems
@@ -18,7 +18,7 @@ keywords:
   - three-stage least squares
   - survey design
   - Stata
-license: "TBD"
+license: "GPL-3.0-or-later"
 references:
   - type: article
     title: "Tricks with Hicks: the EASI demand system"

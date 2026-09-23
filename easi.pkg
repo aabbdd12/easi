@@ -1,4 +1,4 @@
-* 22sep2026
+* 23sep2026
 v 3
 d {bf:easi : the Exact Affine Stone Index demand system in Stata}
 d
@@ -14,7 +14,8 @@ d
 d Author  : {bf:Abdelkrim Araar}, Universite Laval / PEP
 d Email   : {browse "mailto:aabd@ecn.ulaval.ca":aabd@ecn.ulaval.ca}
 d
-d Distribution-Date: 20260922
+d Distribution-Date: 20260923
+d Version       : 1.0.0 (23 September 2026)
 d Stata Version : 14.2 and higher (tables use -collect- from 17, -matlist- below)
 d
 d Ancillary files (net get easi): hixdata.dta, the reference data of Lewbel

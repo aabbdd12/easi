@@ -1,4 +1,5 @@
-*! version 0.1.0  21sep2026
+*! version 1.0.0  23sep2026
+*! License: GPL-3.0-or-later (see LICENSE); https://github.com/aabbdd12/easi
 *! EASI demand system -- pure Stata/Mata, no R
 *! Step 1: estimation only (iterated restricted 3SLS); compat mode for validation
 *! Araar Abdelkrim

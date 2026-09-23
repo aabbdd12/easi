@@ -1,4 +1,5 @@
-*! version 0.2.0  21sep2026
+*! version 1.0.0  23sep2026
+*! License: GPL-3.0-or-later (see LICENSE); https://github.com/aabbdd12/easi
 *! predict after easi -- relay only
 *!
 *! The real work is -program Predict- inside easi.ado: Mata functions written in

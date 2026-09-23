@@ -1,4 +1,5 @@
-*! version 2.0.0  21sep2026
+*! version 2.0.0  23sep2026 (easi 1.0.0)
+*! License: GPL-3.0-or-later (see LICENSE); https://github.com/aabbdd12/easi
 *! sr_easi -- compatibility wrapper around -easi-
 *!
 *! The original sr_easi wrote an R script, shelled out to R to run the "easi"

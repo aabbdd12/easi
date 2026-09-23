@@ -174,6 +174,15 @@ coefficients per equation.
 {synopt:{cmd:r(good)}}mean share, sd of the share, sd of the normalised price{p_end}
 
 
+{title:Author}
+
+{pstd}Abdelkrim Araar, Universite Laval / PEP{break}
+{browse "mailto:aabd@ecn.ulaval.ca":aabd@ecn.ulaval.ca}{p_end}
+
+{pstd}Version 1.0.0, 23 September 2026.  License: GPL-3.0-or-later.
+{browse "https://github.com/aabbdd12/easi"}{p_end}
+
+
 {title:Also see}
 
 {psee}

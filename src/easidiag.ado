@@ -1,4 +1,5 @@
-*! version 0.1.0  22sep2026
+*! version 1.0.0  23sep2026
+*! License: GPL-3.0-or-later (see LICENSE); https://github.com/aabbdd12/easi
 *! Pre-estimation diagnostic for the EASI demand system
 *! Araar Abdelkrim
 

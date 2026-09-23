@@ -88,6 +88,12 @@ Zenodo DOI is on the release page) and
 Lewbel, A., and K. Pendakur. 2009. Tricks with Hicks: the EASI demand system.
 *American Economic Review* 99: 827–863.
 
+## License
+
+GNU General Public License v3.0 or later (`LICENSE`). The frozen R reference
+in `replication/R_reference/` includes the sources of the archived R package
+`easi` 0.21, which is itself under the GPL.
+
 ## Author
 
 Abdelkrim Araar, Université Laval / PEP — aabd@ecn.ulaval.ca
