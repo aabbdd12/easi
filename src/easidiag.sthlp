@@ -1,5 +1,5 @@
 {smcl}
-{* 22sep2026}{...}
+{* *! version 2.0.0  28sep2026}{...}
 {vieweralsosee "easi" "help easi"}{...}
 {viewerjumpto "Syntax" "easidiag##syntax"}{...}
 {viewerjumpto "Description" "easidiag##description"}{...}
@@ -9,6 +9,7 @@
 {hline}
 {hi:easidiag} {hline 2} Diagnose an EASI specification before estimating it
 {hline}
+{p 4 4 2}{txt}Package {cmd:easi}, version {res}2.0.0{txt} (28/09/2026) {c |} Stata {res}14.2{txt} or later {c |} first release {res}1.0.0{txt} (23/09/2026){p_end}
 
 {marker syntax}{title:Syntax}
 
@@ -26,6 +27,19 @@ The syntax is that of {helpb easi}: the same share variables, the same
 {opt zy}, {opt interpz()}, {opt snames()} and weights.  Options that belong to
 the estimator alone -- {opt vce()}, {opt dec()}, {opt compensated} and the rest
 -- are accepted and ignored, and {cmd:easidiag} says which ones it dropped.
+
+{p 4 4 2}
+{opt hhsize()} and {opt elasticities()} are those of {helpb easi}, for the
+weights of the estimation the diagnostic prepares: with {opt hhsize()} and
+without {opt elasticities()}, or with {cmd:elasticities(individuals)}, each
+household counts for its weight times {opt hhsize()}, as {cmd:easi} would
+estimate it.
+
+{p 4 4 2}
+{opt pimpute()}, {opt selection}, {opt selgoods()} and {opt selvars()} are
+those of {helpb easi} too, with the same rules: the missing prices are filled
+as the estimation would fill them, and with {opt selection} the probits of the
+estimation are run and section 9 reports them.
 
 
 {marker description}{title:Description}
@@ -140,6 +154,25 @@ exact.
 Ranks of Z'WZ and of Xhat'W Xhat, and the count of instruments against
 coefficients per equation.
 
+{dlgtab:9. Selection of the buyers}
+
+{p 4 4 2}
+With {opt selection}: for each corrected good, the probit that {helpb easi}
+would estimate (same sample, same weights), with the percentage of buyers, its
+pseudo-R2 (McFadden), the households predicted with probability 0 or 1
+(separation), the number of variables of the probit only ({opt selvars()}), and
+{it:VIF(delta)} at the starting point {it:y} = the Stone index.  In the
+expected share Phi {it:f} + {it:delta} phi, {it:delta} is identified through
+the variables of the probit only or, without them, through the nonlinearity of
+the normal distribution alone; {it:VIF(delta)} = 1/(1 - {it:R}^2), {it:R}^2 the
+uncentred R-squared of phi on the other regressors of the equation (those of
+EASI times Phi), measures how far phi is from a combination of them.  Above 10
+the good is flagged: {it:delta} rests on little more than the curvature of the
+probit; add a variable of the probit only in {opt selvars()}, or leave the good
+uncorrected with {opt selgoods()}.  {cmd:easi} reports the same measure at the
+converged {it:y}.  On the Mexican cereals without a variable of the probit only,
+it is 33 for corn and about 2,000 for wheat.
+
 
 {marker examples}{title:Examples}
 
@@ -148,6 +181,14 @@ coefficients per equation.
 
 {p 4 4 2}The same specification, with a survey weight:{p_end}
 {phang2}{cmd:. easidiag w1-w9 [pw=sweight], prices(p1-p9) expenditure(totexp) demographics(age hsex) power(3)}{p_end}
+
+{p 4 4 2}On the Mexican cereals installed with the package, raw and centred
+logarithms (the example 7 of {helpb easi}):{p_end}
+{phang2}{cmd:. sysuse mex_bench, clear}{p_end}
+{phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1_raw lp2_raw lp3) lnexpenditure(lx_raw) demographics(z1 z2) power(3)}{p_end}
+{phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3)}{p_end}
+{p 8 8 2}{txt}({stata "easi_examples 7":click to run in command window}){p_end}
+{p 8 8 2}{txt}({stata "easi_examples 7, do":open as a do-file}){p_end}
 
 {p 4 4 2}
 {cmd:easidiag} is also reached from the dialog box: {cmd:db easi}, then
@@ -169,9 +210,13 @@ coefficients per equation.
 {synopt:{cmd:r(phimin)}}smallest Phi{p_end}
 {synopt:{cmd:r(wmin)}}smallest mean budget share{p_end}
 
+{p2col 5 20 24 2: Macros}{p_end}
+{synopt:{cmd:r(selgoods)}}the goods corrected ({opt selection}){p_end}
+
 {p2col 5 20 24 2: Matrices}{p_end}
 {synopt:{cmd:r(var)}}mean, sd and |mean|/sd of expenditure and the prices{p_end}
 {synopt:{cmd:r(good)}}mean share, sd of the share, sd of the normalised price{p_end}
+{synopt:{cmd:r(sel_diag)}}by good: percentage of buyers, pseudo-R2, perfectly predicted, VIF(delta) at the start ({opt selection}){p_end}
 
 
 {title:Author}
@@ -179,7 +224,7 @@ coefficients per equation.
 {pstd}Abdelkrim Araar, Universite Laval / PEP{break}
 {browse "mailto:aabd@ecn.ulaval.ca":aabd@ecn.ulaval.ca}{p_end}
 
-{pstd}Version 1.0.0, 23 September 2026.  License: GPL-3.0-or-later.
+{pstd}Version 2.0.0, 28 September 2026 (first release 1.0.0, 23 September 2026).  License: GPL-3.0-or-later.
 {browse "https://github.com/aabbdd12/easi"}{p_end}
 
 

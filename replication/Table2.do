@@ -1,26 +1,12 @@
-*! test_step8.do -- are the reported standard errors right?  Four candidates.
-*!
-*! Pendakur's own code carries the line
-*!     *note that reported standard errors are wrong for iterated estimates
-*! immediately before its final reg3.  The reason he gives is a generated
-*! regressor: the design contains y, which is a function of the coefficients,
-*! and the 3SLS covariance is the one of the last linear step CONDITIONAL on y.
-*!
-*! That diagnosis turns out to be right in principle and almost irrelevant in
-*! practice.  test_step11.do adds the missing dy/dbeta term to the Jacobian,
-*! checks it against finite differences, and finds it worth less than half a
-*! percent -- because y depends on beta only through p'Ap/2 and p'Bp/2, and
-*! normalised log prices are of order 0.1.
-*!
-*! What IS worth 23% is heteroskedasticity.  This file crosses the two:
-*!     conventional / robust   x   conditional on y / + dy/dbeta
-*! and scores all four against a bootstrap that re-runs the whole iterated
-*! procedure and therefore captures everything.
-*!
-*! A deliberately light specification: 9 goods, power 3, three demographics, no
-*! interactions.  Some replications may fail to converge; -easi- exits with
-*! r(430) in that case, so -bootstrap- counts them instead of silently using a
-*! bad fit.
+*! Table2.do -- Table 2 of the technical note: the three types of
+*! elasticities -- the mean over the households of the elasticities of each
+*! household, weighted by the weight (households), the weight times the size
+*! of the household (individuals) or the weight times its expenditure
+*! (market) -- on the reduced Mexican survey, vce(svy).
+*! Also the numbers of Section 4.3: how far the reference household moves
+*! with the mean taken (ln of the mean of x against the mean of ln x), and
+*! what the compensated elasticities change when the mean of the products of
+*! the shares replaces the product of their means (cov(w_j, w_k)/mean w_j).
 
 clear all
 set more off
@@ -40,117 +26,85 @@ if _rc {
 }
 local ROOT = subinstr("`c(pwd)'", "\", "/", .) + "/.."
 adopath ++ "`ROOT'/src"
+local OUT "`ROOT'/replication/out"
+capture log close tt
+log using "`OUT'/types.log", replace text name(tt)
 
-log using "`ROOT'/replication/out/step8.log", replace text name(t8)
+*------------------------------------------------ the three types, mex_bench
+use "`ROOT'/examples/mex_bench.dta", clear
+local M "w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) py vce(svy) nolog notable"
+quietly easi `M'
+tempname EH EHs PH PHs EM EMs PM PMs EI EIs PI PIs
+matrix `EH'  = e(elast_exp)
+matrix `EHs' = e(elast_exp_se)
+matrix `PH'  = vecdiag(e(elast_price_nc))
+matrix `PHs' = vecdiag(e(elast_price_nc_se))
+matrix `EM'  = e(elast_exp_mkt)
+matrix `EMs' = e(elast_exp_mkt_se)
+matrix `PM'  = vecdiag(e(elast_price_nc_mkt))
+matrix `PMs' = vecdiag(e(elast_price_nc_mkt_se))
+local chk1 = e(chk_engel) + e(chk_cournot) + e(chk_engel_mkt) + e(chk_cournot_mkt)
+quietly easi `M' hhsize(hhsize)
+matrix `EI'  = e(elast_exp)
+matrix `EIs' = e(elast_exp_se)
+matrix `PI'  = vecdiag(e(elast_price_nc))
+matrix `PIs' = vecdiag(e(elast_price_nc_se))
+local chk2 = e(chk_engel) + e(chk_cournot)
 
+di as txt _n "Table 2. Expenditure and own-price elasticities of the three types,"
+di as txt "reduced Mexican survey (2,477 households), power(3) py, vce(svy);"
+di as txt "standard errors in parentheses."
+di as txt "{hline 78}"
+di as txt "good" _col(12) "type" _col(26) "expenditure" _col(46) "own price"
+di as txt "{hline 78}"
+local gn "corn wheat other"
+forvalues j = 1/3 {
+	local g : word `j' of `gn'
+	foreach t in H I M {
+		local lab = cond("`t'" == "H", "households", cond("`t'" == "I", "individuals", "market"))
+		di as txt "`g'" _col(12) "`lab'" _col(24) as res %8.4f `E`t''[1, `j'] ///
+			as txt " (" as res %6.4f `E`t's'[1, `j'] as txt ")" _col(44) ///
+			as res %8.4f `P`t''[1, `j'] as txt " (" as res %6.4f `P`t's'[1, `j'] as txt ")"
+		local g ""
+	}
+}
+di as txt "{hline 78}"
+di as txt "Engel and Cournot residuals, all types: " as res %9.2e `chk1' + `chk2'
+
+*------------------------------------------------ the reference household
+di as txt _n "ln(mean x) - mean(ln x): how far the reference household moves"
+quietly gen double __x = exp(lx)
+quietly summarize lx [aw = sweight]
+local ml = r(mean)
+quietly summarize __x [aw = sweight]
+local d = ln(r(mean)) - `ml'
+di as txt "  mex_bench (weighted):  " as res %6.3f `d' as txt "  (the mean of x is " ///
+	as res %4.1f 100 * (exp(`d') - 1) as txt "% above exp(mean ln x))"
 use "`ROOT'/examples/hixdata.dta", clear
+quietly gen double __x = exp(log_y)
+quietly summarize log_y
+local ml = r(mean)
+quietly summarize __x
+local d = ln(r(mean)) - `ml'
+di as txt "  hixdata:               " as res %6.3f `d' as txt "  (the mean of x is " ///
+	as res %4.1f 100 * (exp(`d') - 1) as txt "% above exp(mean ln x))"
+
+*------------------------------------------------ mean of products, product of means
+* the compensated elasticity of the households is (mean Psi + mean(w_j w_k))
+* / mean w_j - 1{j = k}; the product of the means changes it by
+* cov(w_j, w_k) / mean w_j
 local SH sfoodh sfoodr srent soper sfurn scloth stranop srecr spers
-local PR pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers
-local SPEC lnprices(`PR') lnexpenditure(log_y)				///
-	   demographics(age hsex carown) power(3) nolog noelastse
-
-di ""
-di as txt "{hline 78}"
-di as txt "  Ecarts-types des coefficients : quatre variances contre le bootstrap"
-di as txt "{hline 78}"
-
-*------------------------------------------------ the four analytic variances
-timer clear 1
-timer on 1
-qui easi `SH', `SPEC' vce(conventional) legacy(condse)
-timer off 1
-qui timer list 1
-local one = r(t1)
-local K = colsof(e(b))
-local cn : colnames e(b)
-matrix V1 = e(V)
-
-qui easi `SH', `SPEC' vce(conventional)
-matrix V2 = e(V)
-qui easi `SH', `SPEC' vce(robust) legacy(condse)
-matrix V3 = e(V)
-qui easi `SH', `SPEC'
-matrix V4 = e(V)
-local defvce "`e(vce)', `e(vcetype2)'"
-
-di as txt "  specification : " as res `K' as txt " coefficients, "		///
-   as res e(iter) as txt " iterations, " as res %5.2f `one' as txt " s"
-di as txt "  defaut de easi : " as res "`defvce'"
-
-*------------------------------------------------ the bootstrap
-local REPS 400
-di as txt "  bootstrap : `REPS' replications (~" as res			///
-   %4.0f `REPS' * `one' as txt " s)"
-
-set seed 20260921
-qui bootstrap, reps(`REPS') nodots nowarn: easi `SH', `SPEC'
-matrix VB = e(V)
-local nfail = e(N_misreps)
-if "`nfail'" == "" local nfail 0
-di as txt "  replications echouees (non convergence) : " as res `nfail'	///
-   as txt " sur `REPS'"
-
-*------------------------------------------------ comparison
-preserve
-	clear
-	qui set obs `K'
-	gen str40 nm = ""
-	foreach m in 1 2 3 4 B {
-		gen double se`m' = .
-	}
-	forvalues i = 1/`K' {
-		local v : word `i' of `cn'
-		qui replace nm = "`v'" in `i'
-		foreach m in 1 2 3 4 B {
-			qui replace se`m' = sqrt(V`m'[`i',`i']) in `i'
-		}
-	}
-	* the generated regressor is y, so its own coefficients are the ones
-	* whose conditional standard error should be most in error
-	gen byte isy = regexm(nm, "^y[0-9]+$")
-	qui count if isy
-	local ny = r(N)
-	local no = `K' - `ny'
-
-	local lab1 "conventionnelle, cond. sur y"
-	local lab2 "conventionnelle, + dy/dbeta"
-	local lab3 "robuste,         cond. sur y"
-	local lab4 "robuste,         + dy/dbeta"
-
-	di ""
-	di as txt "  se(bootstrap) / se(analytique)   -- au-dessus de 1 = analytique trop petit"
-	di as txt "  variance" _col(36) "termes en y (`ny')" _col(60) "autres (`no')"
-	local worst = 0
-	forvalues m = 1/4 {
-		qui gen double r`m' = seB / se`m'
-		qui su r`m' if isy
-		local a  = r(mean)
-		local ax = r(max)
-		qui su r`m' if !isy
-		local b  = r(mean)
-		local bx = r(max)
-		di as txt "  `lab`m''" _col(36) as res %6.3f `a'			///
-		   as txt " (max " as res %5.2f `ax' as txt ")"			///
-		   _col(60) as res %6.3f `b'					///
-		   as txt " (max " as res %5.2f `bx' as txt ")"
-		if `m' == 4 {
-			local d4  = max(abs(`a' - 1), abs(`b' - 1))
-			local x4  = max(`ax', `bx')
-		}
-	}
-
-	di ""
-	di as txt "  1. le regresseur genere (ligne 1 -> 2, ligne 3 -> 4) ne deplace"
-	di as txt "     presque rien : c'est un terme reel mais d'ordre 0.5 %."
-	di as txt "  2. l'heteroscedasticite (ligne 1 -> 3) vaut 23 % sur les termes"
-	di as txt "     en y, ceux qui dessinent les courbes d'Engel."
-	di as txt "  3. le defaut de easi est la ligne 4."
-	di ""
-	local tag = cond(`d4' < 0.05 & `x4' < 1.20, "ok", "ECHEC")
-	di as txt "     ecart moyen du defaut au bootstrap  " as res %6.3f `d4'	///
-	   _col(52) as txt "max " as res %5.2f `x4' _col(66) as res "`tag'"
-restore
-
-di as txt "{hline 78}"
-
-log close t8
+mata: W = st_data(., tokens("`SH'")); m = mean(W); C = quadvariance(W) :* ((rows(W) - 1) / rows(W))
+mata: D = C :/ m'
+mata: st_numscalar("__omin", min(diagonal(D))); st_numscalar("__omax", max(diagonal(D)))
+mata: st_numscalar("__cmax", max(abs(D - diag(diagonal(D)))))
+di as txt _n "cov(w_j, w_k) / mean w_j, hixdata: own-price " as res %6.3f __omin ///
+	as txt " to " as res %6.3f __omax as txt ", cross-price up to " as res %6.3f __cmax
+use "`ROOT'/examples/mex_bench.dta", clear
+mata: W = st_data(., ("w1", "w2", "w3")); ww = st_data(., "sweight"); ww = ww :/ mean(ww)
+mata: m = mean(W, ww); C = quadcross(W :- m, ww, W :- m) :/ rows(W); D = C :/ m'
+mata: st_numscalar("__omin", min(diagonal(D))); st_numscalar("__omax", max(diagonal(D)))
+di as txt "cov(w_j, w_k) / mean w_j, mex_bench: own-price " as res %6.3f __omin ///
+	as txt " to " as res %6.3f __omax
+log close tt
+di as res _n "Table2: done"

@@ -1,20 +1,20 @@
-*! test_step9.do -- do the reported standard errors match the bootstrap?
-*!                  Simple SRS case, no weights, no survey design.
+*! test_step14.do -- les ecarts-types sous pweight, contre le bootstrap
 *!
-*! test_step8 answered this for the coefficients: the homoskedastic 3SLS
-*! standard error is 23% too small on the terms in y, and -vce(robust)- -- now
-*! the default -- closes the gap.  The generated-regressor term that Pendakur's
-*! comment points at is real but worth under half a percent (test_step11).
+*! Regle du projet : valider les ecarts-types sur SRS, PUIS sous pweight, PUIS
+*! sous plan de sondage -- jamais dans l'autre sens.  Le SRS est verrouille par
+*! test_step8 et test_step9 sur hixdata.  Ici on monte d'un cran.
 *!
-*! Here we ask it of what users actually report: the ELASTICITIES.  Their
-*! reported standard error is the R package's heuristic -- the median across
-*! households of the pointwise delta-method standard error of the corresponding
-*! SEMI-elasticity, divided by the mean budget share.  For the price elasticity
-*! that heuristic ignores the B(C+D+G) term entirely, so it is not obvious that
-*! it should agree with anything.
+*! Le bootstrap doit rebattre l'UNITE DE TIRAGE du plan.  Sous pweight, c'est
+*! l'observation AVEC son poids : le poids est une colonne, il voyage avec la
+*! ligne, donc -bootstrap: easi ... [pw=w]- fait exactement cela.
 *!
-*! The bootstrap re-runs the whole procedure, elasticity computation included,
-*! so it is the reference.
+*! Donnees : le banc mexicain, qui porte un vrai poids d'expansion (et, pour
+*! l'etape suivante, des strates et des PSU).  hixdata reste reserve aux
+*! estimateurs sans poids.
+*!
+*! Ce que ce test NE valide PAS : la stratification et les grappes.  Sous
+*! -vce(robust)-, chaque menage est sa propre unite ; le plan reel a 703 PSU
+*! dans 28 strates.  C'est l'objet de vce(svy), l'etape suivante.
 
 clear all
 set more off
@@ -35,113 +35,175 @@ if _rc {
 local ROOT = subinstr("`c(pwd)'", "\", "/", .) + "/.."
 adopath ++ "`ROOT'/src"
 
-log using "`ROOT'/replication/out/step9.log", replace text name(t9)
+log using "`ROOT'/replication/out/step14.log", replace text name(ta)
 
-use "`ROOT'/examples/hixdata.dta", clear
-local SH sfoodh sfoodr srent soper sfurn scloth stranop srecr spers
-local PR pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers
-local SPEC lnprices(`PR') lnexpenditure(log_y)				///
-	   demographics(age hsex carown) power(3) nolog
-local J 9
+use "`ROOT'/examples/mex_bench.dta", clear
+
+local SH w1 w2 w3
+local PR lp1 lp2 lp3
+local SPEC lnprices(`PR') lnexpenditure(lx) demographics(z1 isMale)	///
+	   power(3) nolog noelastse
+local REPS 500
 
 di ""
 di as txt "{hline 78}"
-di as txt "  Elasticites : ecart-type rapporte contre bootstrap  (SRS, sans poids)"
+di as txt "  Ecarts-types sous pweight : analytique contre bootstrap"
 di as txt "{hline 78}"
 
-*------------------------------------------------ reported
-qui easi `SH', `SPEC'
-matrix EI  = e(elast_income)
-matrix EIS = e(elast_income_se)
-matrix EP  = e(elast_price)
-matrix EPS = e(elast_price_se)
-
-*------------------------------------------------ bootstrap
-* bootstrap cannot subscript an e() matrix inside its expression list, so the
-* quantities of interest are returned by a small rclass wrapper -- the standard
-* route.  easi exits r(430) if it fails to converge, so the wrapper propagates
-* the failure and bootstrap counts it.
-global SH_  "`SH'"
+* -bootstrap- refuses a weight on the prefixed command, so the weight goes
+* INSIDE a wrapper.  That is not a trick: it is the only way to make the
+* bootstrap resample the row together with its weight, which is the sampling
+* unit under pweight.
+global SH_   "`SH'"
 global SPEC_ "`SPEC'"
+global WT_   ""
+capture program drop _eb
+program define _eb, eclass
+	version 14.2
+	if "$WT_" == "" qui easi $SH_, $SPEC_
+	else            qui easi $SH_ $WT_, $SPEC_
+end
 
-capture program drop _elboot
-program define _elboot, rclass
+qui easi `SH', `SPEC'
+local K = colsof(e(b))
+local cn : colnames e(b)
+di as txt "  banc mexicain : " as res _N as txt " menages, " as res `K'	///
+   as txt " coefficients, " as res e(iter) as txt " iterations"
+di as txt "  " as res `REPS' as txt " replications par configuration"
+
+*======================================================= coefficients
+tempname R
+matrix `R' = J(2, 4, .)
+local rn
+local i 0
+foreach cfg in "SRS" "pweight" {
+	local ++i
+	local rn `rn' `cfg'
+	if "`cfg'" == "SRS" {
+		local W
+		global WT_ ""
+	}
+	else {
+		local W [pw=sweight]
+		global WT_ "[pw=sweight]"
+	}
+
+	qui easi `SH' `W', `SPEC'
+	matrix VA = e(V)
+
+	set seed 20260922
+	qui bootstrap, reps(`REPS') nodots nowarn: _eb
+	matrix VB = e(V)
+	local nfail = e(N_misreps)
+	if "`nfail'" == "" local nfail 0
+
+	preserve
+		clear
+		qui set obs `K'
+		gen str32 nm = ""
+		gen double sa = .
+		gen double sb = .
+		forvalues j = 1/`K' {
+			local v : word `j' of `cn'
+			qui replace nm = "`v'"              in `j'
+			qui replace sa = sqrt(VA[`j',`j'])  in `j'
+			qui replace sb = sqrt(VB[`j',`j'])  in `j'
+		}
+		gen double r = sb / sa
+		gen byte isy = regexm(nm, "^y[0-9]+$")
+		qui su r
+		matrix `R'[`i',1] = r(mean)
+		matrix `R'[`i',2] = r(max)
+		qui su r if isy
+		matrix `R'[`i',3] = r(mean)
+		qui su r if !isy
+		matrix `R'[`i',4] = r(mean)
+	restore
+	di as txt "  `cfg' : " as res `nfail' as txt " replication(s) echouee(s)"
+}
+matrix rownames `R' = `rn'
+matrix colnames `R' = moyenne max termes_y autres
+
+di ""
+di as txt "  se(bootstrap) / se(analytique), coefficients"
+di as txt "  au-dessus de 1 = l'analytique sous-estime"
+matlist `R', format(%9.3f) twidth(12) border(all) rowtitle("")
+
+*======================================================= elasticites
+* bootstrap ne sait pas indexer une matrice e() dans sa liste d'expressions,
+* d'ou le relais rclass -- meme procede que test_step9.
+capture program drop _elb
+program define _elb, rclass
 	version 14.2
 	tempname EI EP
-	qui easi $SH_, $SPEC_ noelastse
-	matrix `EI' = e(elast_income)
-	matrix `EP' = e(elast_price)
-	forvalues j = 1/9 {
+	if "$WT_" == "" qui easi $SH_, $SPEC_
+	else            qui easi $SH_ $WT_, $SPEC_
+	matrix `EI' = e(elast_exp)
+	matrix `EP' = e(elast_price_nc)
+	forvalues j = 1/3 {
 		return scalar ei`j' = `EI'[1,`j']
 		return scalar ep`j' = `EP'[`j',`j']
 	}
 end
 
 local el
-forvalues j = 1/`J' {
+forvalues j = 1/3 {
 	local el `el' (ei`j': r(ei`j'))
 }
-forvalues j = 1/`J' {
+forvalues j = 1/3 {
 	local el `el' (ep`j': r(ep`j'))
 }
 
-local REPS 400
-set seed 20260921
-qui bootstrap `el', reps(`REPS') nodots nowarn: _elboot
-matrix BB = e(b)
+global WT_ "[pw=sweight]"
+qui easi `SH' [pw=sweight], lnprices(`PR') lnexpenditure(lx)		///
+	demographics(z1 isMale) power(3) nolog
+matrix EI = e(elast_exp)
+matrix ES = e(elast_exp_se)
+matrix EP = e(elast_price_nc)
+matrix PS = e(elast_price_nc_se)
+
+set seed 20260922
+qui bootstrap `el', reps(`REPS') nodots nowarn: _elb
 matrix BV = e(V)
-local nfail = e(N_misreps)
-if "`nfail'" == "" local nfail 0
-di as txt "  replications echouees : " as res `nfail' as txt " sur `REPS'"
 
-*------------------------------------------------ comparison
-preserve
-	clear
-	qui set obs `=2*`J''
-	gen str12 nm   = ""
-	gen str10 kind = ""
-	gen double est = .
-	gen double ser = .
-	gen double seb = .
-	forvalues j = 1/`J' {
-		local k = `J' + `j'
-		qui replace nm   = "depense `j'"     in `j'
-		qui replace kind = "depense"         in `j'
-		qui replace est  = EI[1,`j']         in `j'
-		qui replace ser  = abs(EIS[1,`j'])   in `j'
-		qui replace seb  = sqrt(BV[`j',`j']) in `j'
+di ""
+di as txt "  se(delta) / se(bootstrap), elasticites sous pweight"
+di as txt "  bien" _col(16) "estime" _col(30) "se delta" _col(44)	///
+   "se boot" _col(58) "rapport"
+local worst 0
+forvalues j = 1/3 {
+	local e1 = EI[1,`j']
+	local s1 = abs(ES[1,`j'])
+	local b1 = sqrt(BV[`j',`j'])
+	local r1 = `s1' / `b1'
+	local worst = max(`worst', abs(`r1' - 1))
+	di as txt "  depense `j'" _col(14) as res %10.4f `e1' _col(28)	///
+	   %10.4f `s1' _col(42) %10.4f `b1' _col(56) %10.4f `r1'
+}
+forvalues j = 1/3 {
+	local k = 3 + `j'
+	local e1 = EP[`j',`j']
+	local s1 = abs(PS[`j',`j'])
+	local b1 = sqrt(BV[`k',`k'])
+	local r1 = `s1' / `b1'
+	local worst = max(`worst', abs(`r1' - 1))
+	di as txt "  prix `j'" _col(14) as res %10.4f `e1' _col(28)	///
+	   %10.4f `s1' _col(42) %10.4f `b1' _col(56) %10.4f `r1'
+}
 
-		qui replace nm   = "prix `j'"        in `k'
-		qui replace kind = "prix"            in `k'
-		qui replace est  = EP[`j',`j']       in `k'
-		qui replace ser  = abs(EPS[`j',`j']) in `k'
-		qui replace seb  = sqrt(BV[`k',`k']) in `k'
-	}
-	gen double ratio = ser / seb
+di ""
+local cmax = max(abs(`R'[2,3] - 1), abs(`R'[2,4] - 1))
+di as txt "  ecart max au bootstrap, coefficients pweight" _col(56)	///
+   as res %9.3f `cmax' _col(68)						///
+   as res cond(`cmax' < 0.12, "ok", "ECHEC")
+di as txt "  ecart max au bootstrap, elasticites pweight" _col(56)	///
+   as res %9.3f `worst' _col(68)					///
+   as res cond(`worst' < 0.15, "ok", "ECHEC")
 
-	di ""
-	di as txt "  Rapport  se(delta, methode corrigee) / se(bootstrap)"
-	di as txt "    (1 = concordance ; < 1 = l'ecart-type rapporte SOUS-estime)"
-	local worst = 0
-	foreach t in depense prix {
-		qui su ratio if kind == "`t'", detail
-		di as txt "    elasticites-`t'" _col(26) "mediane " as res %6.3f r(p50) ///
-		   as txt "   min " as res %6.3f r(min)				///
-		   as txt "   max " as res %6.3f r(max)
-		local worst = max(`worst', abs(r(p50) - 1))
-	}
-	di ""
-	di as txt "    ecart median maximal au bootstrap " as res %6.3f `worst'	///
-	   _col(52) as res cond(`worst' < 0.10, "ok", "ECHEC")
-
-	di ""
-	di as txt "  Detail :"
-	format est ser seb ratio %9.4f
-	list nm est ser seb ratio, noobs sepby(kind) abbreviate(12)
-
-	qui save "`ROOT'/replication/out/elast_se_compare.dta", replace
-restore
-
+di ""
+di as txt "  Rappel : ce test ne couvre ni la stratification ni les grappes."
+di as txt "  Le banc a 703 PSU dans 28 strates ; vce(robust) traite chaque"
+di as txt "  menage comme sa propre unite.  C'est l'objet de vce(svy)."
 di as txt "{hline 78}"
 
-log close t9
+log close ta

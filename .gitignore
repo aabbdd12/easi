@@ -35,3 +35,6 @@ examples/hixdata_levels.dta
 # names, together with the frozen R reference.  Its outputs are regenerated.
 tests/
 replication/out/
+
+# development plans stay local
+dev/

@@ -1,0 +1,211 @@
+*! easi_examples 2.0.0  28sep2026  Abdelkrim Araar
+*! The examples of help easi and help easidiag, run from their links.
+*!   easi_examples #          run example # in the command window
+*!   easi_examples #, db      open the dialog box of easi filled in for example #
+*!   easi_examples #, do      open example # as a do-file in the Do-file Editor
+*! The data in memory are never lost: the run keeps them (preserve) and gives
+*! them back at the end, even after an error or a Break; the do-file does the
+*! same; the dialog box, which needs the example data in memory, refuses to
+*! replace data of the user that have unsaved changes (the example data it
+*! loads are marked and can be replaced). Files written by the examples go to
+*! Stata's temporary folder, c(tmpdir), never to the working folder.
+program define easi_examples
+	version 14.2
+	syntax anything(name=ex id="example number") [, DB DO NOEDIT]
+	capture confirm integer number `ex'
+	if _rc | !inrange(`ex', 1, 9) {
+		di as err "easi_examples: the examples are numbered 1 to 9 (see help easi)"
+		exit 198
+	}
+	if "`db'" != "" & "`do'" != "" {
+		di as err "easi_examples: db and do cannot be combined"
+		exit 198
+	}
+	local T = c(tmpdir)
+	local T : subinstr local T "\" "/", all
+	if substr("`T'", -1, 1) != "/" local T "`T'/"
+	* the Canadian data of Lewbel and Pendakur (2009), prices and expenditure
+	* in logarithms, and the Mexican cereals (ENIGH 2014) with their design,
+	* both installed with the package (sysuse)
+	local SH "sfoodh sfoodr srent soper sfurn scloth stranop srecr spers"
+	local PR "pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers"
+	local H "`SH', lnprices(`PR') lnexpenditure(log_y)"
+	local HZ "age hsex carown time tran"
+	local M "w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx)"
+	local data "sysuse hixdata, clear"
+	local n 0
+	if `ex' == 1 {
+		local title "The Canadian data of Lewbel and Pendakur (2009)"
+		local c1 "easi `H' demographics(age hsex carown) power(3)"
+		local c2 "easi, compensated checks stars"
+		local n 2
+	}
+	else if `ex' == 2 {
+		local title "The specification of Lewbel and Pendakur (2009): power 5, all interactions"
+		local c1 "easi `H' demographics(`HZ') power(5) py zy pz"
+		local n 1
+	}
+	else if `ex' == 3 {
+		local data "sysuse mex_bench, clear"
+		local title "Survey design (Mexican cereals): the variance of the design"
+		local c1 "svyset"
+		local c2 "easi `M' demographics(z1 z2) power(3) py vce(svy) stars"
+		local n 2
+	}
+	else if `ex' == 4 {
+		local title "Reproduce the R package easi 0.21 (compat)"
+		local c1 "easi `H' demographics(`HZ') power(5) py zy pz compat"
+		local n 1
+	}
+	else if `ex' == 5 {
+		local title "After estimation: fitted shares, the implicit utility, Engel curves"
+		local c1 "easi `H' demographics(age hsex carown) power(3) notable"
+		local c2 "predict double what*, shares"
+		local c3 "predict double yhat, y"
+		local c4 "summarize yhat what1-what3"
+		local c5 `"estat engel, n(60) data("`T'easi_curves")"'
+		local n 5
+	}
+	else if `ex' == 6 {
+		local title "The tables in a file (Word, Excel, LaTeX, CSV, Markdown)"
+		local c1 `"easi `H' demographics(age hsex carown) power(3) compensated notable saveres("`T'easi_tables.docx")"'
+		local c2 `"easi, stars saveres("`T'easi_tables.xlsx") notable"'
+		local n 2
+	}
+	else if `ex' == 7 {
+		local data "sysuse mex_bench, clear"
+		local title "Diagnose a specification before estimating it"
+		local c1 "easidiag w1 w2 w3, lnprices(lp1_raw lp2_raw lp3) lnexpenditure(lx_raw) demographics(z1 z2) power(3)"
+		local c2 "easidiag `M' demographics(z1 z2) power(3)"
+		local n 2
+	}
+	else if `ex' == 8 {
+		local data "sysuse mex_bench, clear"
+		local title "The elasticities of the households, of the market and of the individuals"
+		local c1 "easi `M' demographics(z1 z2) power(3) py vce(svy)"
+		local c2 "easi, elasticities(market)"
+		local c3 "easi `M' demographics(z1 z2) power(3) py vce(svy) hhsize(hhsize)"
+		local n 3
+	}
+	else if `ex' == 9 {
+		local data "sysuse mex_bench, clear"
+		local title "The households that do not buy: the selection of the buyers"
+		local SV "selvars(age isMale)"
+		local c1 "easidiag w1 w2 w3 [pw = sweight], lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) `SV'"
+		local c2 "easi `M' demographics(z1 z2) power(3) vce(svy) `SV'"
+		local c3 "predict double Ew*, shares"
+		local c4 "predict double f*, shares latent"
+		local c5 "summarize w1 Ew1 f1 w2 Ew2 f2"
+		local c6 "easi `M' demographics(z1 z2) power(3) `SV' vce(bootstrap, reps(50) seed(1) svy)"
+		local n 6
+	}
+
+	* ---- as a do-file, in Stata's temporary folder ----
+	if "`do'" != "" {
+		local fn "`T'easi_example_`ex'.do"
+		tempname fh
+		file open `fh' using "`fn'", write text replace
+		file write `fh' "* easi, example `ex': `title'" _n
+		file write `fh' "* Written by easi_examples in Stata's temporary folder; save it elsewhere to keep it." _n
+		file write `fh' "* preserve keeps the data in memory and gives them back when this do-file ends;" _n
+		file write `fh' "* delete that line to keep working on the example data." _n
+		file write `fh' "preserve" _n
+		file write `fh' "`data'" _n
+		forvalues i = 1/`n' {
+			file write `fh' `"`c`i''"' _n
+		}
+		file close `fh'
+		if "`noedit'" == "" doedit "`fn'"
+		di as txt "(example `ex' written to " as res `"`fn'"' as txt ")"
+		exit
+	}
+
+	* ---- in the dialog box: needs the example data in memory ----
+	* The dialog takes prices and expenditure in levels and offers robust or
+	* conventional variances: examples 1 and 2 are filled in, from the levels
+	* of the log prices and log expenditure of hixdata (as
+	* examples/hixdata_for_dialog.do does); the others need options the
+	* dialog does not have.
+	if "`db'" != "" {
+		if !inlist(`ex', 1, 2) {
+			di as err "easi_examples: example `ex' needs options the dialog box does not offer; run it in the command window"
+			exit 198
+		}
+		local isex : char _dta[easi_example]
+		if c(changed) & "`isex'" != "1" {
+			di as err "easi_examples, db: the data in memory have changes not saved;"
+			di as err "save them (or clear) first: the dialog box needs the example data in memory"
+			exit 4
+		}
+		qui `data'
+		local EP ""
+		foreach v of local PR {
+			qui gen double e`v' = exp(`v')
+			label variable e`v' "price (level), exp(`v')"
+			local EP `EP' e`v'
+		}
+		qui gen double expend = exp(log_y)
+		label variable expend "total expenditure (level), exp(log_y)"
+		char _dta[easi_example] "1"
+		di as txt "(example data loaded for the dialog box; prices and expenditure in levels:"
+		di as txt " epfoodh-eppers and expend, the exponentials of the logs of hixdata)"
+		db easi
+		* Stata keeps the state of a dialog between two openings: every control
+		* an example may set is first put back to its default
+		.easi_dlg.main.cb_action.setvalue "est"
+		.easi_dlg.main.name_snames.setvalue ""
+		.easi_dlg.main.vl_inddemo.setvalue ""
+		.easi_dlg.main.sp_pow.setvalue 5
+		.easi_dlg.main.ck_inpy.setoff
+		.easi_dlg.main.ck_inpz.setoff
+		.easi_dlg.main.ck_inzy.setoff
+		.easi_dlg.main.cb_vce.setvalue "robust"
+		.easi_dlg.main.cb_elas.setvalue "default"
+		.easi_dlg.main.vn_hhs.setvalue ""
+		.easi_dlg.resop.ck_comp.setoff
+		.easi_dlg.resop.ck_demoel.setoff
+		.easi_dlg.resop.ck_checks.setoff
+		.easi_dlg.resop.ck_noese.setoff
+		.easi_dlg.resop.ck_stars.setoff
+		.easi_dlg.resop.ck_notab.setoff
+		.easi_dlg.resop.fi_save.setvalue ""
+		.easi_dlg.main.sp_reps.setvalue 200
+		.easi_dlg.main.ed_seed.setvalue ""
+		.easi_dlg.main.ck_bsvy.setoff
+		.easi_dlg.sel.vl_pimp.setvalue ""
+		.easi_dlg.sel.ck_sel.setoff
+		.easi_dlg.sel.ed_selg.setvalue ""
+		.easi_dlg.sel.vl_all.setvalue ""
+		.easi_dlg.sel.cb_ng.setvalue "0"
+		* the example
+		.easi_dlg.main.name_items.setvalue "`SH'"
+		.easi_dlg.main.name_prices.setvalue "`EP'"
+		.easi_dlg.main.vn_hhexp.setvalue "expend"
+		if `ex' == 1 {
+			.easi_dlg.main.vl_inddemo.setvalue "age hsex carown"
+			.easi_dlg.main.sp_pow.setvalue 3
+			.easi_dlg.resop.ck_comp.seton
+			.easi_dlg.resop.ck_checks.seton
+			.easi_dlg.resop.ck_stars.seton
+		}
+		if `ex' == 2 {
+			.easi_dlg.main.vl_inddemo.setvalue "`HZ'"
+			.easi_dlg.main.sp_pow.setvalue 5
+			.easi_dlg.main.ck_inpy.seton
+			.easi_dlg.main.ck_inpz.seton
+			.easi_dlg.main.ck_inzy.seton
+		}
+		exit
+	}
+
+	* ---- in the command window: the data in memory are kept ----
+	preserve
+	qui `data'
+	di as txt _n "{hline 78}" _n "easi, example `ex': " as res "`title'" _n as txt "{hline 78}"
+	di as txt `"(example data: `data'; the data in memory come back at the end)"'
+	forvalues i = 1/`n' {
+		di as txt _n `". `c`i''"'
+		`c`i''
+	}
+	if inlist(`ex', 5, 6) di as txt _n `"(files written to `T')"'
+end

@@ -1,23 +1,26 @@
-*! test_step15.do -- ce que le plan de sondage coute, mesure contre le bon oracle
+*! test_step8.do -- are the reported standard errors right?  Four candidates.
 *!
-*! test_step14 comparait vce(robust) a un bootstrap qui rebat des OBSERVATIONS.
-*! Les deux ignorent la meme chose -- la stratification et les grappes -- donc
-*! leur accord ne prouvait rien sur le plan : c'etait un miroir, pas un oracle.
+*! Pendakur's own code carries the line
+*!     *note that reported standard errors are wrong for iterated estimates
+*! immediately before its final reg3.  The reason he gives is a generated
+*! regressor: the design contains y, which is a function of the coefficients,
+*! and the 3SLS covariance is the one of the last linear step CONDITIONAL on y.
 *!
-*! Le bon oracle rebat l'unite de tirage du plan : les PSU A L'INTERIEUR de
-*! chaque strate, avec remise, m_h = n_h, en emportant le poids de chaque ligne.
-*! -idcluster()- est obligatoire, faute de quoi une PSU tiree deux fois compte
-*! pour une seule grappe et la variance sort trop petite.
+*! That diagnosis turns out to be right in principle and almost irrelevant in
+*! practice.  test_step11.do adds the missing dy/dbeta term to the Jacobian,
+*! checks it against finite differences, and finds it worth less than half a
+*! percent -- because y depends on beta only through p'Ap/2 and p'Bp/2, and
+*! normalised log prices are of order 0.1.
 *!
-*! Le banc mexicain : 2 477 menages, 703 PSU, 28 strates, poids d'expansion.
+*! What IS worth 23% is heteroskedasticity.  This file crosses the two:
+*!     conventional / robust   x   conditional on y / + dy/dbeta
+*! and scores all four against a bootstrap that re-runs the whole iterated
+*! procedure and therefore captures everything.
 *!
-*! Ce que ce test mesure : l'ecart entre ce que easi sait faire aujourd'hui --
-*! vce(robust), vce(cluster) -- et la verite du plan.  Cet ecart est le cahier
-*! des charges de vce(svy).
-*!
-*! Reserve : le bootstrap a grappes de Stata ne re-echelonne pas les poids a
-*! chaque replication (ce que ferait un bootstrap de Rao-Wu).  Pour un oracle
-*! de validation c'est l'usage courant et suffisant.
+*! A deliberately light specification: 9 goods, power 3, three demographics, no
+*! interactions.  Some replications may fail to converge; -easi- exits with
+*! r(430) in that case, so -bootstrap- counts them instead of silently using a
+*! bad fit.
 
 clear all
 set more off
@@ -38,208 +41,116 @@ if _rc {
 local ROOT = subinstr("`c(pwd)'", "\", "/", .) + "/.."
 adopath ++ "`ROOT'/src"
 
-log using "`ROOT'/replication/out/step15.log", replace text name(ta)
+log using "`ROOT'/replication/out/step8.log", replace text name(t8)
 
-use "`ROOT'/examples/mex_bench.dta", clear
-
-local SH w1 w2 w3
-local PR lp1 lp2 lp3
-local SPEC lnprices(`PR') lnexpenditure(lx) demographics(z1 isMale)	///
-	   power(3) nolog noelastse
-local REPS 400
+use "`ROOT'/examples/hixdata.dta", clear
+local SH sfoodh sfoodr srent soper sfurn scloth stranop srecr spers
+local PR pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers
+local SPEC lnprices(`PR') lnexpenditure(log_y)				///
+	   demographics(age hsex carown) power(3) nolog noelastse
 
 di ""
 di as txt "{hline 78}"
-di as txt "  Le plan de sondage : ce que vce(robust) et vce(cluster) manquent"
+di as txt "  Ecarts-types des coefficients : quatre variances contre le bootstrap"
 di as txt "{hline 78}"
 
-qui su st
-local nst = r(max)
-qui su pu
-local npu = r(max)
-di as txt "  banc : " as res _N as txt " menages, " as res `npu'		///
-   as txt " PSU, " as res `nst' as txt " strates, poids d'expansion"
-
-* Le poids ne peut pas etre passe a la commande prefixee par -bootstrap-,
-* il doit vivre dans l'enveloppe.  C'est aussi ce qui garantit qu'il est
-* rebattu avec sa ligne.
-global SH_   "`SH'"
-global SPEC_ "`SPEC'"
-capture program drop _eb
-program define _eb, eclass
-	version 14.2
-	qui easi $SH_ [pw=sweight], $SPEC_
-end
-
-*--------------------------------------------------- les variances analytiques
-qui easi `SH' [pw=sweight], `SPEC' vce(robust)
-matrix VR = e(V)
+*------------------------------------------------ the four analytic variances
+timer clear 1
+timer on 1
+qui easi `SH', `SPEC' vce(conventional) legacy(condse)
+timer off 1
+qui timer list 1
+local one = r(t1)
 local K = colsof(e(b))
 local cn : colnames e(b)
-matrix BR = e(b)
+matrix V1 = e(V)
 
-qui easi `SH' [pw=sweight], `SPEC' vce(cluster pu)
-matrix VC = e(V)
-matrix BC = e(b)
+qui easi `SH', `SPEC' vce(conventional)
+matrix V2 = e(V)
+qui easi `SH', `SPEC' vce(robust) legacy(condse)
+matrix V3 = e(V)
+qui easi `SH', `SPEC'
+matrix V4 = e(V)
+local defvce "`e(vce)', `e(vcetype2)'"
 
-qui easi `SH', `SPEC' vce(svy)
-matrix VS = e(V)
-local n_str = e(N_strata)
-local n_psu2 = e(N_psu)
+di as txt "  specification : " as res `K' as txt " coefficients, "		///
+   as res e(iter) as txt " iterations, " as res %5.2f `one' as txt " s"
+di as txt "  defaut de easi : " as res "`defvce'"
 
-mata: st_numscalar("dpt", max(abs(st_matrix("BR") - st_matrix("BC"))))
-di as txt "  les estimes ponctuels ne dependent pas du vce" _col(60)	///
-   as res %11.3e dpt _col(72) as res cond(dpt < 1e-10, "ok", "ECHEC")
+*------------------------------------------------ the bootstrap
+local REPS 500
+di as txt "  bootstrap : `REPS' replications (~" as res			///
+   %4.0f `REPS' * `one' as txt " s)"
 
-*--------------------------------------------------- l'oracle : bootstrap de plan
-di as txt "  bootstrap de plan : " as res `REPS' as txt			///
-   " replications, PSU tirees dans les strates"
-set seed 20260922
-qui bootstrap, reps(`REPS') strata(st) cluster(pu) idcluster(_newpu)	///
-	nodots nowarn: _eb
+set seed 20260921
+qui bootstrap, reps(`REPS') nodots nowarn: easi `SH', `SPEC'
 matrix VB = e(V)
 local nfail = e(N_misreps)
 if "`nfail'" == "" local nfail 0
-di as txt "  replications echouees" _col(60) as res %11.0f `nfail'
+di as txt "  replications echouees (non convergence) : " as res `nfail'	///
+   as txt " sur `REPS'"
 
-*--------------------------------------------------- comparaison
+*------------------------------------------------ comparison
 preserve
 	clear
 	qui set obs `K'
-	gen str32 nm = ""
-	gen double sr = .
-	gen double sc = .
-	gen double ss = .
-	gen double sb = .
-	forvalues j = 1/`K' {
-		local v : word `j' of `cn'
-		qui replace nm = "`v'"             in `j'
-		qui replace sr = sqrt(VR[`j',`j']) in `j'
-		qui replace sc = sqrt(VC[`j',`j']) in `j'
-		qui replace ss = sqrt(VS[`j',`j']) in `j'
-		qui replace sb = sqrt(VB[`j',`j']) in `j'
+	gen str40 nm = ""
+	foreach m in 1 2 3 4 B {
+		gen double se`m' = .
 	}
-	gen double r_rob = sb / sr
-	gen double r_clu = sb / sc
-	gen double r_svy = sb / ss
+	forvalues i = 1/`K' {
+		local v : word `i' of `cn'
+		qui replace nm = "`v'" in `i'
+		foreach m in 1 2 3 4 B {
+			qui replace se`m' = sqrt(V`m'[`i',`i']) in `i'
+		}
+	}
+	* the generated regressor is y, so its own coefficients are the ones
+	* whose conditional standard error should be most in error
+	gen byte isy = regexm(nm, "^y[0-9]+$")
+	qui count if isy
+	local ny = r(N)
+	local no = `K' - `ny'
+
+	local lab1 "conventionnelle, cond. sur y"
+	local lab2 "conventionnelle, + dy/dbeta"
+	local lab3 "robuste,         cond. sur y"
+	local lab4 "robuste,         + dy/dbeta"
 
 	di ""
-	di as txt "  se(bootstrap de plan) / se(analytique)"
-	di as txt "  au-dessus de 1 = l'analytique sous-estime"
-	di as txt "  variante" _col(30) "moyenne" _col(44) "min"	_col(58) "max"
-	foreach v in rob clu svy {
-		local lbl "vce(robust)"
-		if "`v'" == "clu" local lbl "vce(cluster pu)"
-		if "`v'" == "svy" local lbl "vce(svy)"
-		qui su r_`v'
-		di as txt "  `lbl'" _col(28) as res %9.3f r(mean) _col(42)	///
-		   %9.3f r(min) _col(56) %9.3f r(max)
-		local m_`v' = r(mean)
-		local x_`v' = r(max)
+	di as txt "  se(bootstrap) / se(analytique)   -- au-dessus de 1 = analytique trop petit"
+	di as txt "  variance" _col(36) "termes en y (`ny')" _col(60) "autres (`no')"
+	local worst = 0
+	forvalues m = 1/4 {
+		qui gen double r`m' = seB / se`m'
+		qui su r`m' if isy
+		local a  = r(mean)
+		local ax = r(max)
+		qui su r`m' if !isy
+		local b  = r(mean)
+		local bx = r(max)
+		di as txt "  `lab`m''" _col(36) as res %6.3f `a'			///
+		   as txt " (max " as res %5.2f `ax' as txt ")"			///
+		   _col(60) as res %6.3f `b'					///
+		   as txt " (max " as res %5.2f `bx' as txt ")"
+		if `m' == 4 {
+			local d4  = max(abs(`a' - 1), abs(`b' - 1))
+			local x4  = max(`ax', `bx')
+		}
 	}
 
 	di ""
-	di as txt "  Les coefficients les plus touches :"
-	gsort -r_rob
-	di as txt "    coefficient" _col(22) "robust" _col(34)		///
-	   "cluster" _col(46) "svy" _col(58) "boot" _col(70) "boot/svy"
-	forvalues j = 1/5 {
-		di as txt "    " as res %-14s nm[`j'] _col(20) %9.4f sr[`j']	///
-		   _col(32) %9.4f sc[`j'] _col(44) %9.4f ss[`j']		///
-		   _col(56) %9.4f sb[`j'] _col(68) %9.3f r_svy[`j']
-	}
+	di as txt "  1. le regresseur genere (ligne 1 -> 2, ligne 3 -> 4) ne deplace"
+	di as txt "     presque rien : c'est un terme reel mais d'ordre 0.5 %."
+	di as txt "  2. l'heteroscedasticite (ligne 1 -> 3) vaut 23 % sur les termes"
+	di as txt "     en y, ceux qui dessinent les courbes d'Engel."
+	di as txt "  3. le defaut de easi est la ligne 4."
+	di ""
+	local tag = cond(`d4' < 0.05 & `x4' < 1.20, "ok", "ECHEC")
+	di as txt "     ecart moyen du defaut au bootstrap  " as res %6.3f `d4'	///
+	   _col(52) as txt "max " as res %5.2f `x4' _col(66) as res "`tag'"
 restore
 
-*=========================================== les elasticites sous plan
-* Les coefficients sont valides ; les elasticites ne le sont pas encore.  Elles
-* heritent du plan PAR les coefficients, puisque la methode delta s'applique a
-* V.  Mais une elasticite s'ecrit 1 + aleph/wbar, et wbar est une moyenne de
-* population elle aussi estimee, elle aussi soumise au plan : notre jacobien la
-* traite comme fixe.  Ce bloc mesure ce que cette omission coute.
-capture program drop _elb
-program define _elb, rclass
-	version 14.2
-	tempname EI EP
-	qui easi $SH_ [pw=sweight], $SPEC_
-	matrix `EI' = e(elast_exp)
-	matrix `EP' = e(elast_price_nc)
-	forvalues j = 1/3 {
-		return scalar ei`j' = `EI'[1,`j']
-		return scalar ep`j' = `EP'[`j',`j']
-	}
-end
-local el
-forvalues j = 1/3 {
-	local el `el' (ei`j': r(ei`j'))
-}
-forvalues j = 1/3 {
-	local el `el' (ep`j': r(ep`j'))
-}
-
-qui easi `SH', lnprices(`PR') lnexpenditure(lx) demographics(z1 isMale)	///
-	power(3) nolog vce(svy)
-matrix EI = e(elast_exp)
-matrix ES = e(elast_exp_se)
-matrix EP = e(elast_price_nc)
-matrix PS = e(elast_price_nc_se)
-
-set seed 20260922
-qui bootstrap `el', reps(`REPS') strata(st) cluster(pu) idcluster(_newpu2)	///
-	nodots nowarn: _elb
-matrix BE = e(V)
-
-di ""
-di as txt "  Elasticites : se(delta, vce(svy)) / se(bootstrap de plan)"
-di as txt "  bien" _col(14) "part" _col(26) "estime" _col(38) "se delta"	///
-   _col(50) "se boot" _col(62) "rapport"
-local wmax 0
-local pmax 0
-forvalues j = 1/3 {
-	qui su w`j' [aw=sweight]
-	local wj = r(mean)
-	local r1 = abs(ES[1,`j']) / sqrt(BE[`j',`j'])
-	local wmax = max(`wmax', abs(`r1' - 1))
-	di as txt "  depense `j'" _col(12) as res %9.4f `wj' _col(24)	///
-	   %9.4f EI[1,`j'] _col(36) %9.4f abs(ES[1,`j'])		///
-	   _col(48) %9.4f sqrt(BE[`j',`j']) _col(60) %9.3f `r1'
-}
-forvalues j = 1/3 {
-	local k = 3 + `j'
-	qui su w`j' [aw=sweight]
-	local wj = r(mean)
-	local r1 = abs(PS[`j',`j']) / sqrt(BE[`k',`k'])
-	local pmax = max(`pmax', abs(`r1' - 1))
-	di as txt "  prix `j'" _col(12) as res %9.4f `wj' _col(24)	///
-	   %9.4f EP[`j',`j'] _col(36) %9.4f abs(PS[`j',`j'])		///
-	   _col(48) %9.4f sqrt(BE[`k',`k']) _col(60) %9.3f `r1'
-}
-
-*--------------------------------------------------- verdict
-di ""
-local gap_rob = abs(`m_rob' - 1)
-local gap_clu = abs(`m_clu' - 1)
-di as txt "  ecart moyen de vce(robust) au plan" _col(60)		///
-   as res %9.3f `gap_rob'
-di as txt "  ecart moyen de vce(cluster) au plan" _col(60)		///
-   as res %9.3f `gap_clu'
-local gap_svy = abs(`m_svy' - 1)
-di as txt "  ecart moyen de vce(svy) au plan" _col(60)			///
-   as res %9.3f `gap_svy' _col(72)					///
-   as res cond(`gap_svy' < 0.05, "ok", "ECHEC")
-di ""
-if `gap_clu' < `gap_rob' {
-	di as txt "  -> vce(cluster pu) recupere l'essentiel de l'effet de grappe."
-	di as txt "     Ce que vce(svy) ajouterait est la stratification, qui joue"
-	di as txt "     en sens inverse et reduit la variance."
-}
-else {
-	di as txt "  -> le clustering ne suffit pas a lui seul."
-}
-di ""
-di as txt "  ecart max, elasticites-depense" _col(60) as res %9.3f `wmax'
-di as txt "  ecart max, elasticites-prix propres" _col(60)		///
-   as res %9.3f `pmax' _col(72)						///
-   as res cond(`pmax' < 0.15, "ok", "ECHEC")
 di as txt "{hline 78}"
 
-log close ta
+log close t8

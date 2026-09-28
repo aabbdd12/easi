@@ -1,4 +1,4 @@
-*! 11_hixdata_results.do -- section 7.7 of the note: the reference
+*! Table14_15_16_Figure1.do -- Tables 14 to 16 and Figure 1 (Section 8.8) of the note: the reference
 *! specification on hixdata, its elasticity tables, and the Engel curves
 *!
 *! Produces
@@ -7,7 +7,7 @@
 *!   out/engel_atmeans.pdf/.gph    Figure 1, top panel
 *!   out/engel_asobserved.pdf/.gph Figure 1, bottom panel
 *!
-*! Run from the replication/ directory:  do Table8_9_10_Figure1.do
+*! Run from the replication/ directory:  do Table14_15_16_Figure1.do
 
 clear all
 set more off
@@ -16,7 +16,7 @@ set linesize 100
 * Every script locates the module (../src), the data (../examples) and the
 * frozen R reference (R_reference/out) relative to the current directory:
 *     cd <path-to-repository>/replication
-*     do Table8_9_10_Figure1.do
+*     do Table14_15_16_Figure1.do
 * Nothing needs to be edited.  The check below stops with a clear message
 * when the working directory is not replication/.
 capture confirm file "master.do"
@@ -75,4 +75,4 @@ estat engel, asobserved saving("`OUT'/engel_asobserved.gph", replace)
 di as txt "asobserved bandwidth = " %7.4f r(bwidth)
 graph export "`OUT'/engel_asobserved.pdf", replace
 
-di as res _n "11_hixdata_results: done.  Then:  python make_tables.py out"
+di as res _n "Table14_15_16_Figure1: done.  Then:  python make_tables.py out"

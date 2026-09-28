@@ -1,11 +1,11 @@
-* 23sep2026
+* 28sep2026
 v 3
 d {bf:easi : the Exact Affine Stone Index demand system in Stata}
 d
 d Author  : {bf:Abdelkrim Araar}, Universite Laval / PEP
 d Email   : {browse "mailto:aabd@ecn.ulaval.ca":aabd@ecn.ulaval.ca}
 d
-d Version       : 1.0.0 (23 September 2026)
-d Stata Version : 14.2 and higher (tables use -collect- from 17, -matlist- below)
+d Version       : 2.0.0 (28 September 2026)
+d Stata Version : 14.2 and higher
 d
-p easi     EASI demand system: iterated 3SLS, elasticities, delta-method and survey-design standard errors, easidiag
+p easi     EASI demand system: iterated 3SLS, elasticities of households, individuals or market, influence-function, survey-design and bootstrap standard errors, non-buyers (Shonkwiler-Yen), easidiag

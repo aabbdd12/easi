@@ -14,20 +14,25 @@ R_reference/.
 How to run
 
     cd <path-to-repository>/replication
-    do master.do                 // everything, about an hour (four bootstraps of 400 replications)
+    do master.do                 // everything, about two hours and a quarter
     global BOOT 0
-    do master.do                 // everything except the bootstraps, a few minutes
-    do Table1.do                 // any single script
+    global MC 0
+    do master.do                 // everything without resampling, a few minutes
+    do Table2.do                 // any single script
 
 Every script locates the module, the data and the R reference relative to the
 current directory and stops with a message if it is not run from replication/;
-nothing needs to be edited. Logs, CSV files and figures go to out/. The LaTeX
-tables of Section 7.7 are then built with
+nothing needs to be edited. Logs, CSV files and figures go to out/.
+global BOOT 0 skips the bootstraps (Tables 3 to 6, 9 and 10, about forty
+minutes); global MC 0 skips the brute force and the Monte Carlo experiments
+(Tables 7, 8 and 9, about an hour and a half). The LaTeX tables of Section 8.8
+(Tables 14 to 16) are then built with
 
     python make_tables.py out
 
-Requirements: Stata 14.2 or later (17 or later for the collect tables; matlist
-is used below), Python 3 for make_tables.py.
+Requirements: Stata 14.2 or later, Python 3 for make_tables.py. dgp_easi.do
+holds the data-generating process of Sections 5.9 and 6.8
+(easi_dgp, n() seed() [power() censor]); the scripts that need it run it.
 
 What produces what
 
@@ -35,87 +40,147 @@ What produces what
   dropped good recovered vs estimated
 
   - script: Table1.do
-  - output in out/: step10.log (the table is printed in the note's layout at
-    the end)
+  - output in out/: step10.log
 
-- Table 2 — four coefficient covariances against the bootstrap, 400
-  replications, SRS
+- Table 2 — the three types of elasticities on the Mexican survey; ln of the
+  mean against the mean of ln x; the effect of the mean of products on the
+  compensated elasticities (Section 4.3)
 
   - script: Table2.do
-  - output in out/: step8.log
+  - output in out/: types.log
 
-- Table 3 — vce(robust), vce(cluster), vce(svy) against the design bootstrap;
-  also the survey design row of Table 4
+- Section 4.3 — the market and individuals elasticities against oracles, the
+  total Jacobian with the y term
 
-  - script: Table3.do
-  - output in out/: step15.log
+  - script: Section4-3_types_checks.do
+  - output in out/: (screen)
 
-- Table 4 — the ratio of two estimators: rows SRS and pweight
-
-  - script: Table4.do
-  - output in out/: step14.log
-
-- Table 5 — elasticity standard errors against the bootstrap
-
-  - script: Table5.do
-  - output in out/: step9.log, elast_se_compare.dta
-
-- Table 6 — the dummy set perturbed away from exact collinearity; and the four
-  easidiag reports of Section 6.1
-
-  - script: Table6.do
-  - output in out/: easidiag_cases.log
-
-- Table 7 — the reading grid of Section 6.1
-
-  - script: (text, no script)
-
-- Tables 8, 9, 10 and Figure 1 — the reference specification on hixdata: the
-  header and Table 02 as printed, the e() matrices behind the three tables,
-  the Engel curves
-
-  - script: Table8_9_10_Figure1.do then make_tables.py
-  - output in out/: hixdata_output.log, elast_*.csv, tab_*.tex,
-    engel_atmeans.pdf, engel_asobserved.pdf
-
-- Table 11 — the audit summary of Appendix A
-
-  - script: (text, no script)
-
-- Table 12 — the finite-difference benchmark of the elasticity formulas; also
-  the Slutsky check and the range of Φ (Appendix A.5–A.6)
-
-  - script: Table12.do
-  - output in out/: audit.log
-
-- Section 4.3 — orientation of the price tables, compensated_q = Γ, Engel and
+- Section 4.4 — orientation of the price tables, compensated_q = Γ, Engel and
   Cournot aggregation
 
-  - script: Section4-3_orientation_aggregation.do
+  - script: Section4-4_orientation_aggregation.do
   - output in out/: step12.log
 
-- Section 4.4 — the analytic Jacobian against forward differences, six
+- Section 4.5 — the analytic Jacobian against forward differences, six
   specifications, four families; the demographic standard errors cell by cell
 
-  - script: Section4-4_analytic_jacobian.do
+  - script: Section4-5_analytic_jacobian.do
   - output in out/: step16.log
 
+- Table 3 — four coefficient covariances against the bootstrap, 500
+  replications, SRS
+
+  - script: Table3.do
+  - output in out/: step8.log
+
 - Section 5.3 — the generated-regressor Jacobian against a numerical Jacobian
-  of an independently written moment vector (1e-9), and its effect
+  of an independently written moment vector, and its effect
 
   - script: Section5-3_generated_regressor.do
   - output in out/: step11.log
 
-- Section 6 — easidiag estimates nothing, detects and names a near-dependency,
-  predicts the iterations
+- Table 4 — vce(robust), vce(cluster), vce(svy) against the design bootstrap;
+  also the survey design row of Table 5
 
-  - script: Section6_easidiag_checks.do
+  - script: Table4.do
+  - output in out/: step15.log
+
+- Table 5 — elasticity standard errors against the bootstrap under pweight
+
+  - script: Table5.do
+  - output in out/: step14.log
+
+- Table 6 — elasticity standard errors against the bootstrap, hixdata
+
+  - script: Table6.do
+  - output in out/: step9.log, elast_se_compare.dta
+
+- Table 7 — the influence function by brute force, two specifications of the
+  perfect design
+
+  - script: Table7.do
+  - output in out/: bruteforce.log
+
+- Table 8 — Monte Carlo on the perfect EASI design, 700 samples
+
+  - script: Table8.do
+  - output in out/: mc_perfect.log
+
+- Section 6.1 — pimpute() against an oracle
+
+  - script: Section6-1_pimpute.do
+  - output in out/: (screen)
+
+- Section 6.4 — the probits against Stata's probit; the general engine against
+  the 3SLS engine; the estimator against ivregress 2sls, predict and the
+  completion of y against closed forms
+
+  - script: Section6-4_probits.do, Section6-4_general_engine.do,
+    Section6-4_selection_oracle.do
+  - output in out/: (screen)
+
+- Section 6.5 — vce(bootstrap)
+
+  - script: Section6-5_bootstrap_option.do
+  - output in out/: (screen)
+
+- Section 6.6 — the elasticities of the expected demand against finite
+  differences
+
+  - script: Section6-6_selection_elasticities.do
+  - output in out/: (screen)
+
+- Table 9 — the variance under selection: brute force on the Mexican survey;
+  bootstrap and Monte Carlo on the censored perfect design
+
+  - script: Table9_bruteforce.do, Table9_bootstrap.do, Table9_montecarlo.do
+  - output in out/: selection_bruteforce.log, selection_bootstrap.log,
+    selection_montecarlo.log
+
+- Table 10 — the households that do not buy on the Mexican survey: easidiag,
+  the correction, the survey variance against vce(bootstrap, svy)
+
+  - script: Table10.do
+  - output in out/: selection_mex.log
+
+- Table 11 — the dummy set perturbed away from exact collinearity; and the
+  four easidiag reports of Section 7.1
+
+  - script: Table11.do
+  - output in out/: easidiag_cases.log
+
+- Table 12 — the reading grid of Section 7.1
+
+  - script: (text, no script)
+
+- Section 7 — easidiag estimates nothing, detects and names a near-dependency,
+  predicts the iterations; its selection section against 1/(1 − R²)
+
+  - script: Section7_easidiag_checks.do, Section7_easidiag_selection.do
   - output in out/: step13.log
 
-- Section 7.6 — running times
+- Table 13 (Section 8.7) — running times
 
-  - script: Section7-6_timing.do
+  - script: Table13.do
   - output in out/: (screen)
+
+- Tables 14, 15, 16 and Figure 1 — the reference specification on hixdata: the
+  header and Table 02 as printed, the e() matrices behind the three tables,
+  the Engel curves
+
+  - script: Table14_15_16_Figure1.do then make_tables.py
+  - output in out/: hixdata_output.log, elast_*.csv, tab_*.tex,
+    engel_atmeans.pdf, engel_asobserved.pdf
+
+- Table 17 — the audit summary of Appendix A
+
+  - script: (text, no script)
+
+- Table 18 — the finite-difference benchmark of the elasticity formulas; also
+  the Slutsky check and the range of Φ (Appendix A.5–A.6)
+
+  - script: Table18.do
+  - output in out/: audit.log
 
 - Appendix A.1 — the reproduction lock: compat = R package to 1.8e-11
   (coefficients) and 1.3e-12 (standard errors)
@@ -137,7 +202,9 @@ What produces what
 
 Most scripts are the module's test suite under these names: each asserts what
 it verifies and stops on any departure, so a clean run of master.do is itself
-the statement that the note's numbers reproduce.
+the statement that the note's numbers reproduce. The scripts of Tables 2 and 7
+to 10 are measurements rather than tests: they print the numbers the note
+reports.
 
 The R reference (R_reference/)
 
@@ -158,7 +225,7 @@ compares every table with the frozen reference (2.6e-9 on the coefficients,
 defects directly in its output. Neither R script is needed to reproduce the
 note: the frozen CSV files are what the Stata scripts read. The logs of both
 runs are kept beside them (make_reference.log, check_binary_r34.log); they
-carry the R running times quoted in Section 7.6 of the note — 45.8 s under R
+carry the R running times quoted in Section 8.7 of the note — 45.8 s under R
 4.3.0, 43 to 46 s for the compiled package under R 3.4.4, on the same machine
 as the Stata timings.
 

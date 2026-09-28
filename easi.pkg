@@ -1,22 +1,25 @@
-* 23sep2026
+* 28sep2026
 v 3
 d {bf:easi : the Exact Affine Stone Index demand system in Stata}
 d
 d easi estimates the EASI demand system of Lewbel and Pendakur (2009) entirely
 d within Stata and Mata: iterated restricted 3SLS with Slutsky symmetry, the
 d implicit utility index, expenditure, price (compensated and uncompensated) and
-d demographic elasticities with delta-method standard errors, sampling weights,
-d robust, cluster and survey-design (svyset) variance, predict, estat engel, and
-d a pre-estimation diagnostic, easidiag, that detects the causes of slow or
+d demographic elasticities of the households, the individuals or the market,
+d with influence-function standard errors, sampling weights, robust, cluster,
+d survey-design (svyset) and bootstrap variance; the households that do not buy
+d (missing prices imputed, the Shonkwiler-Yen correction); tables with stars
+d exported to Word, LaTeX, Excel, CSV or Markdown; predict, estat engel, and a
+d pre-estimation diagnostic, easidiag, that detects the causes of slow or
 d failed convergence before any estimation is run.  sr_easi is kept as a
 d backward-compatible wrapper.
 d
 d Author  : {bf:Abdelkrim Araar}, Universite Laval / PEP
 d Email   : {browse "mailto:aabd@ecn.ulaval.ca":aabd@ecn.ulaval.ca}
 d
-d Distribution-Date: 20260923
-d Version       : 1.0.0 (23 September 2026)
-d Stata Version : 14.2 and higher (tables use -collect- from 17, -matlist- below)
+d Distribution-Date: 20260928
+d Version       : 2.0.0 (28 September 2026)
+d Stata Version : 14.2 and higher
 d
 d Ancillary files (net get easi): hixdata.dta, the reference data of Lewbel
 d and Pendakur (2009); mex_bench.dta, a reduced Mexican expenditure survey
@@ -33,7 +36,12 @@ f src/easidiag.ado
 f src/easidiag.sthlp
 f src/sr_easi.ado
 f src/sr_easi_estat.ado
+f src/_easi_tabstars.ado
+f src/_easi_pimpute.ado
+f src/easi_examples.ado
+F examples/hixdata.dta
 f examples/hixdata.dta
+F examples/mex_bench.dta
 f examples/mex_bench.dta
 f examples/easi_tour.do
 f examples/mex_tour.do

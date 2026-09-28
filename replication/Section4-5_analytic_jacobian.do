@@ -24,9 +24,12 @@
 *!    avec T = 3 et 9 biens, la cellule (2,1) de e(elast_demo_se) affichait
 *!    l'ecart-type de la cellule (1,2).
 *!
-*! 3. LES SE N'ONT PAS BOUGE.  Les tables d'ecarts-types de la specification de
-*!    reference sont identiques a celles du jacobien numerique, a la precision
-*!    des differences finies pres : le remplacement est transparent.
+*! 3. LE REMPLACEMENT EST TRANSPARENT.  Le terme des coefficients des
+*!    ecarts-types, sqrt(diag(G V G')), est le meme avec le jacobien analytique
+*!    et avec le numerique, a la precision des differences finies pres.
+*!    (Depuis 2.0.0, decision C2, les ecarts-types rapportes ajoutent le terme
+*!    d'echantillonnage des moyennes : ils ne sont plus G V G' seul, et ce
+*!    terme est verifie par test_step20 et le Monte-Carlo du tableau 8 (Table8.do).)
 *!
 *! Donnees : hixdata et le banc mexicain (celui-ci pour pz avec un plan
 *! stratifie, et parce que ses prix sont centres : P_J n'y est pas nul par
@@ -39,7 +42,7 @@ set more off
 * Every script locates the module (../src), the data (../examples) and the
 * frozen R reference (R_reference/out) relative to the current directory:
 *     cd <path-to-repository>/replication
-*     do Section4-4_analytic_jacobian.do
+*     do Section4-5_analytic_jacobian.do
 * Nothing needs to be edited.  The check below stops with a clear message
 * when the working directory is not replication/.
 capture confirm file "master.do"
@@ -120,17 +123,16 @@ mata: st_matrix("gap", _jac_gap(9, 5, 1))
 di as txt "   hixdata, reference spec         EI " %9.2e gap[1,1] "  EPRICE " %9.2e gap[1,2] "  EZ " %9.2e gap[1,3] "  EPQ " %9.2e gap[1,4]
 assert gap[1,1] < `TOL_NL' & gap[1,2] < `TOL_NL' & gap[1,3] < `TOL_L' & gap[1,4] < `TOL_L'
 
-* les tables d'ecarts-types de la specification de reference, telles que
-* rapportees, contre les memes tables recalculees avec le jacobien numerique
-tempname Van Vfd Sfd
+* le terme des coefficients des ecarts-types de la specification de
+* reference, jacobien analytique contre jacobien numerique
+tempname Van Sfd San
 matrix `Van' = e(V)
 mata: st_matrix("`Sfd'", sqrt(diagonal(st_matrix("_easi_Gfd") * st_matrix("`Van'") * st_matrix("_easi_Gfd")'))')
-matrix PSE = e(elast_price_se)
-matrix ZSE = e(elast_demo_se)
-mata: pse = st_matrix("PSE"); zse = st_matrix("ZSE"); sfd = st_matrix("`Sfd'")
-mata: st_numscalar("dP", max(abs(vec(pse) - sfd[| 10 \ 90 |]') :/ sfd[| 10 \ 90 |]'))
-mata: st_numscalar("dZ", max(abs(vec(zse) - sfd[| 91 \ 135 |]') :/ sfd[| 91 \ 135 |]'))
-di as txt "   reported SE vs numerical-Jacobian SE:  price " %9.2e dP "   demographic " %9.2e dZ
+mata: st_matrix("`San'", sqrt(diagonal(st_matrix("_easi_Gan") * st_matrix("`Van'") * st_matrix("_easi_Gan")'))')
+mata: san = st_matrix("`San'"); sfd = st_matrix("`Sfd'")
+mata: st_numscalar("dP", max(abs(san[| 10 \ 90 |] - sfd[| 10 \ 90 |]) :/ sfd[| 10 \ 90 |]))
+mata: st_numscalar("dZ", max(abs(san[| 91 \ 135 |] - sfd[| 91 \ 135 |]) :/ sfd[| 91 \ 135 |]))
+di as txt "   coefficient term, analytic vs numerical Jacobian:  price " %9.2e dP "   demographic " %9.2e dZ
 assert dP < 1e-5 & dZ < 1e-5
 
 scalar drop _easi_jaccheck
