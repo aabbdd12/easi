@@ -9,8 +9,11 @@ authors:
     email: aabd@ecn.ulaval.ca
 version: "2.0.0"
 date-released: "2026-09-28"
-doi: 10.5281/zenodo.22914058
+doi: 10.5281/zenodo.23012510
 identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23012510
+    description: "This version (2.0.0), technical note deposited on Zenodo"
   - type: doi
     value: 10.5281/zenodo.22914059
     description: "Version 1.0.0, technical note deposited on Zenodo"
@@ -18,7 +21,7 @@ identifiers:
     value: 10.5281/zenodo.22914058
     description: "All versions; resolves to the latest one"
 repository-code: "https://github.com/aabbdd12/easi"
-url: "https://doi.org/10.5281/zenodo.22914058"
+url: "https://doi.org/10.5281/zenodo.23012510"
 keywords:
   - demand systems
   - EASI
