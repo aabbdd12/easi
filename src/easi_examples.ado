@@ -121,14 +121,13 @@ program define easi_examples
 	}
 
 	* ---- in the dialog box: needs the example data in memory ----
-	* The dialog takes prices and expenditure in levels and offers robust or
-	* conventional variances: examples 1 and 2 are filled in, from the levels
-	* of the log prices and log expenditure of hixdata (as
-	* examples/hixdata_for_dialog.do does); the others need options the
-	* dialog does not have.
+	* The dialog takes prices and expenditure in levels: they are built from
+	* the logs of the example data (exp(), as examples/hixdata_for_dialog.do
+	* does), which gives the same estimates.  Example 5 is predict and estat
+	* engel after an estimation: commands, not a dialog.
 	if "`db'" != "" {
-		if !inlist(`ex', 1, 2) {
-			di as err "easi_examples: example `ex' needs options the dialog box does not offer; run it in the command window"
+		if `ex' == 5 {
+			di as err "easi_examples: example 5 is predict and estat engel after an estimation; run it in the command window"
 			exit 198
 		}
 		local isex : char _dta[easi_example]
@@ -138,17 +137,32 @@ program define easi_examples
 			exit 4
 		}
 		qui `data'
+		* the logs of the example, and their levels for the dialog
+		if inlist(`ex', 1, 2, 4, 6) {
+			local LP `PR'
+			local LX log_y
+			local SHD `SH'
+		}
+		else {
+			local LP lp1 lp2 lp3
+			local LX lx
+			if `ex' == 7 {
+				local LP lp1_raw lp2_raw lp3
+				local LX lx_raw
+			}
+			local SHD w1 w2 w3
+		}
 		local EP ""
-		foreach v of local PR {
+		foreach v of local LP {
 			qui gen double e`v' = exp(`v')
 			label variable e`v' "price (level), exp(`v')"
 			local EP `EP' e`v'
 		}
-		qui gen double expend = exp(log_y)
-		label variable expend "total expenditure (level), exp(log_y)"
+		qui gen double expend = exp(`LX')
+		label variable expend "total expenditure (level), exp(`LX')"
 		char _dta[easi_example] "1"
 		di as txt "(example data loaded for the dialog box; prices and expenditure in levels:"
-		di as txt " epfoodh-eppers and expend, the exponentials of the logs of hixdata)"
+		di as txt " the exponentials of `LP' and `LX': `EP' expend)"
 		db easi
 		* Stata keeps the state of a dialog between two openings: every control
 		* an example may set is first put back to its default
@@ -169,6 +183,7 @@ program define easi_examples
 		.easi_dlg.resop.ck_stars.setoff
 		.easi_dlg.resop.ck_notab.setoff
 		.easi_dlg.resop.fi_save.setvalue ""
+		.easi_dlg.resop.ck_compat.setoff
 		.easi_dlg.main.sp_reps.setvalue 200
 		.easi_dlg.main.ed_seed.setvalue ""
 		.easi_dlg.main.ck_bsvy.setoff
@@ -178,7 +193,7 @@ program define easi_examples
 		.easi_dlg.sel.vl_all.setvalue ""
 		.easi_dlg.sel.cb_ng.setvalue "0"
 		* the example
-		.easi_dlg.main.name_items.setvalue "`SH'"
+		.easi_dlg.main.name_items.setvalue "`SHD'"
 		.easi_dlg.main.name_prices.setvalue "`EP'"
 		.easi_dlg.main.vn_hhexp.setvalue "expend"
 		if `ex' == 1 {
@@ -188,12 +203,44 @@ program define easi_examples
 			.easi_dlg.resop.ck_checks.seton
 			.easi_dlg.resop.ck_stars.seton
 		}
-		if `ex' == 2 {
+		if inlist(`ex', 2, 4) {
 			.easi_dlg.main.vl_inddemo.setvalue "`HZ'"
 			.easi_dlg.main.sp_pow.setvalue 5
 			.easi_dlg.main.ck_inpy.seton
 			.easi_dlg.main.ck_inpz.seton
 			.easi_dlg.main.ck_inzy.seton
+		}
+		if `ex' == 4 {
+			.easi_dlg.resop.ck_compat.seton
+		}
+		if `ex' == 6 {
+			.easi_dlg.main.vl_inddemo.setvalue "age hsex carown"
+			.easi_dlg.main.sp_pow.setvalue 3
+			.easi_dlg.resop.ck_comp.seton
+			.easi_dlg.resop.ck_notab.seton
+			.easi_dlg.resop.fi_save.setvalue "`T'easi_tables.docx"
+		}
+		if inlist(`ex', 3, 7, 8, 9) {
+			.easi_dlg.main.vl_inddemo.setvalue "z1 z2"
+			.easi_dlg.main.sp_pow.setvalue 3
+		}
+		if `ex' == 3 {
+			.easi_dlg.main.ck_inpy.seton
+			.easi_dlg.main.cb_vce.setvalue "svy"
+			.easi_dlg.resop.ck_stars.seton
+		}
+		if `ex' == 7 {
+			.easi_dlg.main.cb_action.setvalue "diag"
+		}
+		if `ex' == 8 {
+			.easi_dlg.main.ck_inpy.seton
+			.easi_dlg.main.cb_vce.setvalue "svy"
+			.easi_dlg.main.cb_elas.setvalue "market"
+		}
+		if `ex' == 9 {
+			.easi_dlg.main.cb_vce.setvalue "svy"
+			.easi_dlg.sel.ck_sel.seton
+			.easi_dlg.sel.vl_all.setvalue "age isMale"
 		}
 		exit
 	}

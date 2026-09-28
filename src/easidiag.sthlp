@@ -188,6 +188,7 @@ logarithms (the example 7 of {helpb easi}):{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1_raw lp2_raw lp3) lnexpenditure(lx_raw) demographics(z1 z2) power(3)}{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3)}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 7":click to run in command window}){p_end}
+{p 8 8 2}{txt}({stata "easi_examples 7, db":click to run in dialog box}){p_end}
 {p 8 8 2}{txt}({stata "easi_examples 7, do":open as a do-file}){p_end}
 
 {p 4 4 2}

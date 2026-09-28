@@ -215,6 +215,12 @@ TEXT     sp_txt  70      25      140      .,                            /*
                 */ label("Do not display the tables")                  /*
                 */ option("notable")
 
+// compat: reproduce the R package easi 0.21 (its formulas, the conventional
+// variance); the elasticities of the households only, no selection
+ CHECKBOX ck_compat 10     +30    500  .,                           /*
+                */ label("Reproduce the R package easi 0.21 (compat)")     /*
+                */ option("compat")
+
 
 END
 
@@ -809,6 +815,7 @@ BEGIN
                 call resop.tx_save.disable
                 call resop.fi_save.disable
                 call resop.ck_notab.disable
+                call resop.ck_compat.disable
         }
         if !has_diag {
                 call main.tx_vce.enable
@@ -825,6 +832,7 @@ BEGIN
                 call resop.tx_save.enable
                 call resop.fi_save.enable
                 call resop.ck_notab.enable
+                call resop.ck_compat.enable
         }
         call program vce_state
 END
@@ -1016,6 +1024,7 @@ BEGIN
                         optionarg /quoted resop.fi_save
                 }
                 option resop.ck_notab
+                option resop.ck_compat
 		if resop.ck_comp {
 			put " compensated"
 		}

@@ -727,8 +727,8 @@ data of Lewbel and Pendakur (2009) ({cmd:sysuse hixdata}: nine goods, prices
 and expenditure in logarithms) and the Mexican cereals ({cmd:sysuse mex_bench}:
 three goods, a stratified two-stage design already {helpb svyset}).  Each one
 runs from its blue links: in the command window, as a do-file opened in the
-Do-file Editor, and, for the first two, in the dialog box (filled in; click
-OK).  The data in memory are not lost: the command window and the do-file give
+Do-file Editor, and, except the fifth (commands after an estimation), in the
+dialog box (filled in, prices and expenditure in levels; click OK).  The data in memory are not lost: the command window and the do-file give
 them back at the end, even after an error; the dialog box, which needs the
 example data in memory, refuses to replace data that have unsaved changes.
 Files written by the examples go to Stata's temporary folder.  The links call
@@ -763,6 +763,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {phang2}{cmd:. svyset}{p_end}
 {phang2}{cmd:. easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) py vce(svy) stars}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 3":example 3: click to run in command window}){p_end}
+{p 8 8 2}{txt}({stata "easi_examples 3, db":click to run in dialog box}){p_end}
 {p 8 8 2}{txt}({stata "easi_examples 3, do":open as a do-file}){p_end}
 
 {title:Example 4: Reproduce the R package easi 0.21}
@@ -773,6 +774,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {cmd:lnprices(pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers) lnexpenditure(log_y)}
 {cmd:demographics(age hsex carown time tran) power(5) py zy pz compat}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 4":example 4: click to run in command window}){p_end}
+{p 8 8 2}{txt}({stata "easi_examples 4, db":click to run in dialog box}){p_end}
 {p 8 8 2}{txt}({stata "easi_examples 4, do":open as a do-file}){p_end}
 
 {title:Example 5: After estimation}
@@ -797,6 +799,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {cmd:demographics(age hsex carown) power(3) compensated notable saveres(tables.docx)}{p_end}
 {phang2}{cmd:. easi, stars saveres(tables.xlsx) notable}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 6":example 6: click to run in command window}){p_end}
+{p 8 8 2}{txt}({stata "easi_examples 6, db":click to run in dialog box}){p_end}
 {p 8 8 2}{txt}({stata "easi_examples 6, do":open as a do-file}){p_end}
 
 {title:Example 7: Diagnose a specification before estimating it}
@@ -806,6 +809,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1_raw lp2_raw lp3) lnexpenditure(lx_raw) demographics(z1 z2) power(3)}{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3)}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 7":example 7: click to run in command window}){p_end}
+{p 8 8 2}{txt}({stata "easi_examples 7, db":click to run in dialog box}){p_end}
 {p 8 8 2}{txt}({stata "easi_examples 7, do":open as a do-file}){p_end}
 
 {title:Example 8: The elasticities of the households, of the market and of the individuals}
@@ -816,6 +820,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {phang2}{cmd:. easi, elasticities(market)}{p_end}
 {phang2}{cmd:. easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) py vce(svy) hhsize(hhsize)}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 8":example 8: click to run in command window}){p_end}
+{p 8 8 2}{txt}({stata "easi_examples 8, db":click to run in dialog box}){p_end}
 {p 8 8 2}{txt}({stata "easi_examples 8, do":open as a do-file}){p_end}
 
 {title:Example 9: The households that do not buy}
@@ -829,6 +834,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {phang2}{cmd:. summarize w1 Ew1 f1 w2 Ew2 f2}{p_end}
 {phang2}{cmd:. easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) selvars(age isMale) vce(bootstrap, reps(50) seed(1) svy)}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 9":example 9: click to run in command window}){p_end}
+{p 8 8 2}{txt}({stata "easi_examples 9, db":click to run in dialog box}){p_end}
 {p 8 8 2}{txt}({stata "easi_examples 9, do":open as a do-file}){p_end}
 
 
