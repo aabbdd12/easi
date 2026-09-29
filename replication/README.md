@@ -53,6 +53,7 @@ Requirements: Stata 14.2 or later, Python 3 for `make_tables.py`.
 | **Table 7** — the influence function by brute force, two specifications of the perfect design | `Table7.do` | `bruteforce.log` |
 | **Table 8** — Monte Carlo on the perfect EASI design, 700 samples | `Table8.do` | `mc_perfect.log` |
 | Section 6.1 — `pimpute()` against an oracle | `Section6-1_pimpute.do` | (screen) |
+| Section 6.1 — the analytic standard errors with `pimpute()`, with and without the influence of the imputation, against saved brute forces (`pimpute_reference/*.mmat`; the script regenerates them with `bf`) | `Section6-1_pimpute_bruteforce.do` | (screen) |
 | Section 6.4 — the probits against Stata's `probit`; the general engine against the 3SLS engine; the estimator against `ivregress 2sls`, `predict` and the completion of y against closed forms | `Section6-4_probits.do`, `Section6-4_general_engine.do`, `Section6-4_selection_oracle.do` | (screen) |
 | Section 6.5 — `vce(bootstrap)` | `Section6-5_bootstrap_option.do` | (screen) |
 | Section 6.6 — the elasticities of the expected demand against finite differences | `Section6-6_selection_elasticities.do` | (screen) |

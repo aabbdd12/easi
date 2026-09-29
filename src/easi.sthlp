@@ -187,10 +187,14 @@ Households still without a price leave the sample, and the means are computed
 again until the sample no longer changes: the donors are the households of the
 final sample.  The weight is that of the estimation (times {opt hhsize()} under
 {cmd:elasticities(individuals)}).  A note reports, good by good, the prices
-filled at each level.  The filled prices are then treated as data: the
-analytic standard errors do not include the imputation, the bootstrap does
-({cmd:vce(bootstrap)} fills them again on every replication).  {cmd:predict}
-and {cmd:estat engel} fill them in the same way on {cmd:e(sample)}.
+filled at each level.  The analytic standard errors include the imputation:
+a household that gives its price moves the mean of its group, hence the
+prices it fills, and its influence function carries that change through the
+system, the probits and the elasticities.  The term sums to zero within each
+group, so it cancels under {cmd:vce(cluster)} or {cmd:vce(svy)} at the level
+of the first grouping variable; {cmd:vce(bootstrap)} fills the prices again on
+every replication.  {cmd:predict} and {cmd:estat engel} fill them in the same
+way on {cmd:e(sample)}.
 
 {phang}
 {opt selection} corrects for the households that do not buy (Shonkwiler and
@@ -825,7 +829,9 @@ Files written by the examples go to Stata's temporary folder.  The links call
 
 {title:Example 9: The households that do not buy}
 
-{pstd}A household in ten buys no corn, one in six no wheat.  The diagnostic runs the probits first, with the age and the sex of the head in the probits only; the system is then estimated on all the households with the expected shares, and a bootstrap of the whole procedure gives the standard errors again (about two minutes).{p_end}
+{pstd}A household in ten buys no corn, one in six no wheat.  The diagnostic runs the probits first, with the age
+and the sex of the head in the probits only; the system is then estimated on all the households with the expected
+shares, and a bootstrap of the whole procedure gives the standard errors again (about two minutes).{p_end}
 {phang2}{cmd:. sysuse mex_bench, clear}{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3 [pw = sweight], lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) selvars(age isMale)}{p_end}
 {phang2}{cmd:. easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) vce(svy) selvars(age isMale)}{p_end}
@@ -881,7 +887,8 @@ aggregation{p_end}
 {synopt:{cmd:e(selection)}}{cmd:shonkwiler-yen} with {opt selection}{p_end}
 {synopt:{cmd:e(selgoods)}}the goods corrected; {cmd:e(selvars)} the {opt selvars()} specification{p_end}
 {synopt:{cmd:e(sel_z_}{it:good}{cmd:)}}the variables of the probit of {it:good} only{p_end}
-{synopt:{cmd:e(sel_zall)}}all the variables of {opt selvars()}; {cmd:e(sel_flags)}, {cmd:e(sel_zmask)} which equation is corrected and which of them enter it (for {cmd:predict} and {cmd:estat engel}){p_end}
+{synopt:{cmd:e(sel_zall)}}all the variables of {opt selvars()}; {cmd:e(sel_flags)}, {cmd:e(sel_zmask)} which equation
+is corrected and which of them enter it (for {cmd:predict} and {cmd:estat engel}){p_end}
 {synopt:{cmd:e(mode)}}{cmd:corrected}, {cmd:compat} or {cmd:mixed}{p_end}
 {synopt:{cmd:e(report)}}reporting options in force{p_end}
 

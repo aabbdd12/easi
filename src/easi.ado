@@ -573,10 +573,31 @@ program Estimate, eclass
 	* of equaids); households still without a price leave the sample.  Done
 	* once the sample is otherwise final, with the weight of the estimation,
 	* so that the donors are the households estimated on (estat and predict
-	* redo it on e(sample)).  The filled prices are treated as data.
+	* redo it on e(sample)).  The analytic standard errors include the
+	* imputation (each donor moves the mean of its group, hence the prices it
+	* fills): the log prices before filling and the groups, as integers, go
+	* to Mata (_easi_impmap).
+	local lp0list ""
+	local impglist ""
+	if "`pimpute'" != "" {
+		local k0 0
+		foreach v of local lnplist {
+			local ++k0
+			tempvar lp0`k0'
+			quietly gen double `lp0`k0'' = `v' if `touse'
+			local lp0list `lp0list' `lp0`k0''
+		}
+	}
 	if "`pimpute'" != "" {
 		_easi_pimpute `lnplist', touse(`touse') wt(`wvar') groups(`pimpute') ///
 			names(`shares')
+		local k0 0
+		foreach g of local pimpute {
+			local ++k0
+			tempvar ig`k0'
+			quietly egen long `ig`k0'' = group(`g') if `touse'
+			local impglist `impglist' `ig`k0''
+		}
 		local pinotes `"`r(notes)'"'
 		foreach l of local pinotes {
 			di as txt `"`l'"'
@@ -690,7 +711,8 @@ program Estimate, eclass
 			`=cond(`lg_sigma1',1,100)',					///
 			`tolerance', `iterate', `noisy',				///
 			"`b'", "`V'", "`Sig'", "`it'", "`crit'", "`conv'", `domkt',	///
-			"`selgstr'", "`zall'", "`zmstr'", "`selas'", "`ifv'")
+			"`selgstr'", "`zall'", "`zmstr'", "`selas'", "`ifv'",	///
+			"`lp0list'", "`impglist'", `=("`pimpute'" != "")')
 	}
 	else mata: _easi_run("`shares'", "`lnplist'", "`lnx'", "`demographics'",	///
 		"`touse'", "`wvar'", `neff', `vtype', "`clvar'",		///
@@ -702,7 +724,8 @@ program Estimate, eclass
 		`lg_elastse', `doese', `docq', `lg_condse',			///
 		`=cond(`lg_sigma1',1,100)',					///
 		`tolerance', `iterate', `noisy',				///
-		"`b'", "`V'", "`Sig'", "`it'", "`crit'", "`conv'", `domkt')
+		"`b'", "`V'", "`Sig'", "`it'", "`crit'", "`conv'", `domkt',	///
+		"`lp0list'", "`impglist'", `=("`pimpute'" != "")')
 
 	* ---- coefficient names -------------------------------------------------
 	local cn
@@ -4188,10 +4211,256 @@ real colvector _easi_rif(real colvector N, real colvector D,
 	return(sw :* ((N :- Nb) :/ Db :- (Nb / Db^2) :* (D :- Db)))
 }
 
+// ---------------------------------------------------------------------------
+// pimpute(): the influence of the imputation of the prices on the analytic
+// standard errors.  A household that gives its price to the mean m_gj of its
+// group moves it by w_d (lp_dj - m_gj) / W_gj when its weight moves, and with
+// it the prices it fills; its influence function gains that change times the
+// derivative, in the filled prices of the group, of the estimating equations
+// (the moments of the system, the scores of the probits) and of the sample
+// terms of the elasticities.  The term sums to zero within each group: it
+// cancels under vce(cluster) or vce(svy) at the level of the first grouping
+// variable.  Checked against a brute force (tests/test_step28.do): analytic /
+// brute-force standard errors 0.998-1.001 (without selection) and 0.998-1.000
+// (with selection, where omitting the term overstated standard errors of
+// elasticities by up to 9%).  The map and its application are those of
+// equaids 1.2.0 (_eq_impmap, _eq_impapply):
+// GI (n x J, the group of each filled price, 0 otherwise) and DT (one row
+// per donor and group: good, row, group, w_d (lp_dj - m_gj) / W_gj).
+// ---------------------------------------------------------------------------
+// the rows of X summed by key (1..n), n x cols(X)
+real matrix _easi_impsumby(real colvector key, real matrix X, real scalar n)
+{
+	real colvector o, ko
+	real matrix    info, R
+	R = J(n, cols(X), 0)
+	if (rows(key) == 0) return(R)
+	o  = order(key, 1)
+	ko = key[o]
+	info = panelsetup(ko, 1)
+	R[ko[info[., 1]], .] = panelsum(X[o, .], info)
+	return(R)
+}
+
+// the map of the imputation (LP0: the log prices before filling; GR: the
+// groups of pimpute(), as integers); the largest gap between a filled price
+// and the mean that should have filled it goes to _easi_imp_mapchk
+void _easi_impmap(real matrix LP, real matrix LP0, real matrix GR,
+	real colvector om, real matrix GI, real matrix DT)
+{
+	real colvector isI, isD, key, done, ix, id
+	real rowvector vals
+	real scalar    N, M, j, l, k, v, W1, m1, ng, chk
+	N = rows(LP) ; M = cols(LP)
+	GI = J(N, M, 0) ; DT = J(0, 4, .)
+	ng = 0 ; chk = 0
+	for (j = 1; j <= M; j++) {
+		isI = (LP0[., j] :>= .)
+		if (!sum(isI)) continue
+		done = J(N, 1, 0)
+		for (l = 1; l <= cols(GR); l++) {
+			key = GR[., l]
+			isD = (LP0[., j] :< .) :& (key :< .)
+			if (!sum(isD)) continue
+			vals = uniqrows(select(key, isD))'
+			for (k = 1; k <= cols(vals); k++) {
+				v  = vals[k]
+				ix = selectindex(isI :& !done :& (key :== v))
+				if (rows(ix) == 0) continue
+				id = selectindex(isD :& (key :== v))
+				W1 = sum(om[id])
+				if (W1 <= 0) continue
+				m1 = sum(om[id] :* LP0[id, j]) / W1
+				chk = max((chk, max(abs(LP[ix, j] :- m1))))
+				ng++
+				GI[ix, j] = J(rows(ix), 1, ng)
+				DT = DT \ (J(rows(id), 1, j), id, J(rows(id), 1, ng),
+					om[id] :* (LP0[id, j] :- m1) :/ W1)
+				done[ix] = J(rows(ix), 1, 1)
+			}
+		}
+	}
+	st_numscalar("_easi_imp_mapchk", chk)
+}
+
+// Dp[j]: n x q derivatives of the contributions in lp_j (NULL: none);
+// returns the n x q influence of the imputation
+real matrix _easi_impapply(pointer(real matrix) rowvector Dp, real scalar N,
+	real scalar q, real matrix GI, real matrix DT)
+{
+	real matrix    X, SG
+	real colvector key, r
+	real scalar    j
+	if (rows(DT) == 0) return(J(N, q, 0))
+	X = J(0, q, .) ; key = J(0, 1, .)
+	for (j = 1; j <= cols(Dp); j++) {
+		if (Dp[j] == NULL) continue
+		r = selectindex(GI[., j] :> 0)
+		if (rows(r) == 0) continue
+		X   = X \ (*Dp[j])[r, .]
+		key = key \ GI[r, j]
+	}
+	SG = _easi_impsumby(key, X, max(GI))
+	return(_easi_impsumby(DT[., 2], DT[., 4] :* SG[DT[., 3], .], N))
+}
+
+// the scores of the system (those of _easi_ifb) at the log prices P, the
+// coefficients b fixed: y from the cost identity, the instrument from the
+// coefficients b1 of the first pass (Pendakur's scheme), the first stage
+// ZZiZX and Sigma fixed
+real matrix _easi_impS(real colvector b, real colvector b1, real scalar nphase,
+	real matrix Si, real matrix ZZiZX, real matrix s, real matrix P,
+	real colvector lnx, real matrix z, real colvector wt, real rowvector ms,
+	real scalar R, real scalar py, real scalar zy, real scalar pz,
+	real rowvector ipz, real scalar lgQuant, real scalar k)
+{
+	real matrix np, X, Zi, Xhat, E
+	real colvector ystone, pAp, pBp, y, ytil, yinst, pAp1, pBp1
+	real scalar Jg, neq
+	Jg = cols(s); neq = Jg - 1
+	np = P[, 1::neq] :- P[, Jg]
+	ystone = lnx - rowsum(s :* P)
+	pAp = .; pBp = .
+	_easi_quadf(b, np, z, R, py, pz, zy, ipz, lgQuant, pAp, pBp)
+	y = (ystone :+ 0.5 :* pAp) :/ (1 :- 0.5 :* pBp)
+	X = _easi_design(y, z, np, R, py, zy, pz, ipz)
+	ytil = lnx - P * ms'
+	if (nphase > 1) {
+		pAp1 = .; pBp1 = .
+		_easi_quadf(b1, np, z, R, py, pz, zy, ipz, lgQuant, pAp1, pBp1)
+		yinst = (ytil :+ 0.5 :* pAp1) :/ (1 :- 0.5 :* pBp1)
+	}
+	else yinst = ytil
+	Zi   = _easi_instr(yinst, z, np, R, py, zy, pz, ipz)
+	Xhat = Zi * ZZiZX
+	E    = s[, 1::neq] - X * rowshape(b', neq)'
+	return(_easi_scores(Xhat, E, Si, wt, k, neq))
+}
+
+// the numerators of the elasticities, household by household (those of
+// _easi_esamp), at the log prices P, the coefficients fixed
+real matrix _easi_impNN(real colvector b, real matrix s, real matrix P,
+	real matrix z, real colvector lnx, real colvector wt, real scalar R,
+	real scalar py, real scalar zy, real scalar pz, real rowvector ipz,
+	real scalar lgQuant, real scalar lgEZ, real scalar lgB, real scalar doCQ)
+{
+	real matrix np, EPRICE, EP, EPS, EPQ, EZ, NN, DD, Ts
+	real rowvector EI, ER, ws
+	real colvector ystone, pAp, pBp, y, Dn2, est
+	real scalar Jg, neq
+	Jg = cols(s); neq = Jg - 1
+	np = P[, 1::neq] :- P[, Jg]
+	ystone = lnx - rowsum(s :* P)
+	pAp = .; pBp = .
+	_easi_quadf(b, np, z, R, py, pz, zy, ipz, lgQuant, pAp, pBp)
+	y = (ystone :+ 0.5 :* pAp) :/ (1 :- 0.5 :* pBp)
+	EI = .; ER = .; EPRICE = .; EP = .; EPS = .; EPQ = .; EZ = .; ws = .; Dn2 = .
+	_easi_epoint(b, s, P, z, y, wt, R, py, zy, pz, ipz, lgEZ, lgB, EI, ER,
+		EPRICE, EP, EPS, EPQ, EZ, ws, Dn2)
+	est = .; NN = .; DD = .
+	Ts = _easi_esamp(b, s, P, z, y, wt, Dn2, R, py, zy, pz, ipz, doCQ, est,
+		NN, DD)
+	return(NN)
+}
+
+
+// pimpute(), with selection: the moments of the engine, household by
+// household (those of _easi_g_run), at the log prices P, at fixed theta and
+// alpha: Phi, phi and the Mills ratios from the probit designs at P, the
+// completed y re-solved from y0, the instrument from the first pass b1
+real matrix _easi_impgGh(real colvector th, real rowvector al, real colvector b1,
+	real scalar nphase, real matrix P, real colvector lnx, real matrix z,
+	real matrix Q, real matrix zm, real rowvector cix, real rowvector ao,
+	real matrix s, real matrix D0, real colvector y0, real colvector wt,
+	real rowvector ms, real rowvector ki, real rowvector ko,
+	real rowvector bidx, real rowvector didx, real scalar R, real scalar py,
+	real scalar zy, real scalar pz, real rowvector ipz, real scalar lgQuant)
+{
+	real matrix np, PH, PHI, M0, X, Z0, Xs, Zs, Gh
+	real colvector ystone, y, ytil, yinst, pAp1, pBp1, b
+	real rowvector dl, rg
+	real scalar Jg, neq, i
+	Jg = cols(s); neq = Jg - 1
+	np = P[, 1::neq] :- P[, Jg]
+	ystone = lnx - rowsum(s :* P)
+	PH = .; PHI = .; M0 = .
+	_easi_g_probs(al, P, lnx, z, Q, zm, cix, ao, PH, PHI, M0)
+	b  = th[bidx]
+	dl = J(1, cols(ki), 0)
+	if (cols(didx)) dl[selectindex(cix :> 0)] = th[didx]'
+	y  = _easi_g_y(y0, ystone, np, z, D0, M0, cix, b, dl, R, py, zy, pz, ipz,
+		lgQuant)
+	X  = _easi_design(y, z, np, R, py, zy, pz, ipz)
+	ytil = lnx - P * ms'
+	if (nphase > 1) {
+		pAp1 = .; pBp1 = .
+		_easi_quadf(b1, np, z, R, py, pz, zy, ipz, lgQuant, pAp1, pBp1)
+		yinst = (ytil :+ 0.5 :* pAp1) :/ (1 :- 0.5 :* pBp1)
+	}
+	else yinst = ytil
+	Z0 = _easi_instr(yinst, z, np, R, py, zy, pz, ipz)
+	Xs = .; Zs = .
+	_easi_g_blocks(X, Z0, PH, PHI, cix, ki, ko, Xs, Zs)
+	Gh = J(rows(s), sum(ki), .)
+	for (i = 1; i <= neq; i++) {
+		rg = (ko[i] + 1)..(ko[i] + ki[i])
+		Gh[., rg] = Zs[., rg] :* (wt :* (s[., i] - Xs[., rg] * th[rg]))
+	}
+	return(Gh)
+}
+
+// the scores of the probits of the corrected goods (w lambda s, the order
+// of alpha) at the log prices P, alpha fixed
+real matrix _easi_imppscore(real rowvector al, real matrix P, real colvector lnx,
+	real matrix z, real matrix Q, real matrix zm, real rowvector cix,
+	real rowvector ao, real matrix s, real colvector wt)
+{
+	real matrix Sc, S
+	real colvector xb, a, r
+	real scalar i, c
+	Sc = J(rows(P), 0, .)
+	for (i = 1; i <= cols(cix); i++) {
+		if (!cix[i]) continue
+		c  = cix[i]
+		S  = _easi_seldesign(P, lnx, z, Q, (cols(Q) ? zm[i, .] : J(1, 0, .)))
+		xb = S * al[| ao[c] + 1 \ ao[c] + cols(S) |]'
+		a  = 2 :* (s[., i] :> 0) :- 1
+		r  = a :* normalden(a :* xb) :/ normal(a :* xb)
+		Sc = Sc, (wt :* r) :* S
+	}
+	return(Sc)
+}
+
+// the inverses of the observed Hessians of the probits, block-diagonal in
+// the order of alpha (those of _easi_probit)
+real matrix _easi_imppIi(real rowvector al, real matrix P, real colvector lnx,
+	real matrix z, real matrix Q, real matrix zm, real rowvector cix,
+	real rowvector ao, real matrix s, real colvector wt)
+{
+	real matrix B, S
+	real colvector xb, a, r
+	real rowvector rg
+	real scalar i, c
+	B = J(cols(al), cols(al), 0)
+	for (i = 1; i <= cols(cix); i++) {
+		if (!cix[i]) continue
+		c  = cix[i]
+		S  = _easi_seldesign(P, lnx, z, Q, (cols(Q) ? zm[i, .] : J(1, 0, .)))
+		rg = (ao[c] + 1)..(ao[c] + cols(S))
+		xb = S * al[rg]'
+		a  = 2 :* (s[., i] :> 0) :- 1
+		r  = a :* normalden(a :* xb) :/ normal(a :* xb)
+		B[rg, rg] = invsym(quadcross(S, wt :* (r :* (r :+ xb)), S))
+	}
+	return(B)
+}
+
+
 real matrix _easi_esamp(real colvector b, real matrix s, real matrix P,
 	real matrix z, real colvector y, real colvector wt, real colvector Dn2,
 	real scalar R, real scalar py, real scalar zy, real scalar pz,
-	real rowvector ipz, real scalar doCQ, real colvector est)
+	real rowvector ipz, real scalar doCQ, real colvector est,
+	| real matrix NN, real matrix DD)
 {
 	real matrix C, Yr, Zp, Al, alp, bjr, gjt, hjt, bjk, Ai, ZA, Ts
 	real colvector cb, sw, Nh, one
@@ -4229,10 +4498,18 @@ real matrix _easi_esamp(real colvector b, real matrix s, real matrix P,
 	nE  = rEQ + (doCQ ? Jg * Jg : 0)
 	Ts  = J(n, nE, 0)
 	est = J(nE, 1, .)
+	if (args() > 14) {
+		NN = J(n, nE, 0)
+		DD = J(n, nE, 0)
+	}
 
 	for (i = 1; i <= Jg; i++) {
 		Ts[, i] = _easi_rif(alp[, i], s[, i], sw, e)
 		est[i]  = 1 + e
+		if (args() > 14) {
+			NN[, i] = alp[, i]
+			DD[, i] = s[, i]
+		}
 		// A_i[tt, q]: tt = 1 the price term, tt = s + 1 its interaction
 		// with the demographic ipz[s]
 		Ai = colshape(cb[| oA + (i - 1) * na * Jg + 1 \ oA + i * na * Jg |], Jg)
@@ -4241,10 +4518,18 @@ real matrix _easi_esamp(real colvector b, real matrix s, real matrix P,
 			Nh = ZA[, q] + bjk[q, i] :* y - s[, q] :* alp[, i]
 			Ts[, rEP + (i - 1) * Jg + q] = _easi_rif(Nh, s[, i], sw, e)
 			est[rEP + (i - 1) * Jg + q]  = e - (i == q)
+			if (args() > 14) {
+				NN[, rEP + (i - 1) * Jg + q] = Nh
+				DD[, rEP + (i - 1) * Jg + q] = s[, i]
+			}
 			if (doCQ) {
 				Nh = ZA[, q] + bjk[q, i] :* y + s[, q] :* s[, i]
 				Ts[, rEQ + (i - 1) * Jg + q] = _easi_rif(Nh, s[, q], sw, e)
 				est[rEQ + (i - 1) * Jg + q]  = e
+				if (args() > 14) {
+					NN[, rEQ + (i - 1) * Jg + q] = Nh
+					DD[, rEQ + (i - 1) * Jg + q] = s[, q]
+				}
 			}
 		}
 		for (t = 1; t <= T; t++) {
@@ -4255,6 +4540,10 @@ real matrix _easi_esamp(real colvector b, real matrix s, real matrix P,
 			}
 			Ts[, rEZ + (i - 1) * T + t] = _easi_rif(Nh, one, sw, e)
 			est[rEZ + (i - 1) * T + t]  = e
+			if (args() > 14) {
+				NN[, rEZ + (i - 1) * T + t] = Nh
+				DD[, rEZ + (i - 1) * T + t] = one
+			}
 		}
 	}
 	return(Ts)
@@ -4732,9 +5021,16 @@ void _easi_g_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 	string scalar bnm, string scalar Vnm, string scalar Snm,
 	string scalar itnm, string scalar crnm, string scalar cvnm,
 	real scalar doMkt, string scalar sgstr, string scalar qvars,
-	string scalar zmstr, string scalar alnm, string scalar ifv)
+	string scalar zmstr, string scalar alnm, string scalar ifv,
+	string scalar lp0vars, string scalar impgvars, real scalar doImp)
 {
 	real matrix s, p, z, np, X, Z0, Y, Rr, Rt, V, Sigma, L, H, Xs, Zs
+	real matrix GI, DT, KDg, KDsc, BIi, Pup, Pdn, Gh0
+	real matrix Nu, Du, Nd, Dd, Alu, Ald, HSu, HSd
+	real rowvector offu, offd
+	real colvector b1, rr, yu, yd
+	pointer(real matrix) rowvector DGh, DSc, DNg, DDg
+	real scalar jj, eps
 	real matrix Q, zm, PH, PHI, M0, D0, IFA, Gh, Dt, Da, Gam, Pm, IFt, E
 	real matrix PH2, PHI2, M02, Vb
 	real colvector lnx, ystone, ytil, y, yold, yinst, th, thold, pAp, pBp
@@ -4841,6 +5137,7 @@ void _easi_g_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 				break
 			}
 		}
+		if (ph == 1) b1 = b
 		if (ph < nphase) yinst = (ytil :+ 0.5 :* pAp) :/ (1 :- 0.5 :* pBp)
 	}
 
@@ -4884,6 +5181,61 @@ void _easi_g_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 		E[., i] = Y[., i] - Xs[., rg] * th[rg]
 		Gh[., rg] = Zs[., rg] :* (wt :* E[., i])
 	}
+
+	// pimpute(): the influence of the imputation of the prices -- the
+	// moments of the system (Phi, phi, the completed y and the instrument
+	// move with the filled prices, at fixed theta, alpha, Sigma and first
+	// pass), the scores of the probits (through their observed Hessian),
+	// and the numerators and denominators of the elasticities; central
+	// differences, good by good, every filled price of the good at once
+	DNg = J(1, J, NULL); DDg = J(1, J, NULL); GI = J(0, 0, .); DT = J(0, 4, .)
+	KDg = J(n, Kt, 0)
+	if (doImp & vtype) {
+		_easi_impmap(p, st_data(., lp0vars, touse), st_data(., impgvars, touse),
+			wt, GI, DT)
+	}
+	if (rows(DT)) {
+		Gh0 = _easi_impgGh(th, al, b1, nphase, p, lnx, z, Q, zm, cix, ao, s, D0, y,
+			wt, ms, ki, ko, bidx, didx, R, py, zy, pz, ipz, lgQuant)
+		st_numscalar("_easi_imp_gchk", mreldif(Gh0, Gh))
+		DGh = J(1, J, NULL); DSc = J(1, J, NULL)
+		eps = 1e-5
+		for (jj = 1; jj <= J; jj++) {
+			rr = selectindex(GI[., jj] :> 0)
+			if (rows(rr) == 0) continue
+			Pup = p; Pup[rr, jj] = Pup[rr, jj] :+ eps
+			Pdn = p; Pdn[rr, jj] = Pdn[rr, jj] :- eps
+			DGh[jj] = &((_easi_impgGh(th, al, b1, nphase, Pup, lnx, z, Q, zm, cix,
+				ao, s, D0, y, wt, ms, ki, ko, bidx, didx, R, py, zy, pz, ipz,
+				lgQuant) - _easi_impgGh(th, al, b1, nphase, Pdn, lnx, z, Q, zm,
+				cix, ao, s, D0, y, wt, ms, ki, ko, bidx, didx, R, py, zy, pz,
+				ipz, lgQuant)) :/ (2 * eps))
+			if (C) DSc[jj] = &((_easi_imppscore(al, Pup, lnx, z, Q, zm, cix, ao, s,
+				wt) - _easi_imppscore(al, Pdn, lnx, z, Q, zm, cix, ao, s, wt)) :/
+				(2 * eps))
+			if (C) {
+				_easi_g_parts(th, al, y, s, Pup, z, lnx, Q, zm, cix, ao,
+					lnx - rowsum(s :* Pup), Pup[, 1::neq] :- Pup[, J], D0, ki,
+					ko, bidx, didx, R, py, zy, pz, ipz, lgQuant, 1, Nu, Du,
+					offu, Alu, HSu, yu)
+				_easi_g_parts(th, al, y, s, Pdn, z, lnx, Q, zm, cix, ao,
+					lnx - rowsum(s :* Pdn), Pdn[, 1::neq] :- Pdn[, J], D0, ki,
+					ko, bidx, didx, R, py, zy, pz, ipz, lgQuant, 1, Nd, Dd,
+					offd, Ald, HSd, yd)
+				DNg[jj] = &((Nu - Nd) :/ (2 * eps))
+				DDg[jj] = &((Du - Dd) :/ (2 * eps))
+			}
+		}
+		KDg = _easi_impapply(DGh, n, Kt, GI, DT)
+		if (C) {
+			BIi = _easi_imppIi(al, p, lnx, z, Q, zm, cix, ao, s, wt)
+			st_numscalar("_easi_imp_pchk", mreldif(_easi_imppscore(al, p, lnx, z, Q,
+				zm, cix, ao, s, wt) * BIi, IFA))
+			KDsc = _easi_impapply(DSc, n, cols(al), GI, DT)
+			IFA  = IFA + KDsc * BIi
+		}
+	}
+
 	Dt = J(Kt, Kt, .)
 	for (j = 1; j <= Kt; j++) {
 		h = 1e-6 * max((1, abs(th[j])))
@@ -4897,7 +5249,7 @@ void _easi_g_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 	}
 	Gam = L * Dt
 	Pm  = _easi_kinv(_easi_border(Gam, Rt), Kt)
-	IFt = Gh
+	IFt = Gh + KDg
 	na  = cols(al)
 	if (C) {
 		// the probits: Phi, phi, the Mills ratios and y move with alpha
@@ -4917,6 +5269,7 @@ void _easi_g_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 		IFt = IFt + IFA * Da'
 	}
 	IFt = IFt * L' * Pm'
+	if (rows(st_numscalar("_easi_ifkeep"))) st_matrix("_easi_ifkeep_b", IFt)
 	if (vtype == 0) V = Pm * H * Pm'
 	else            V = _easi_agg(IFt, vtype, clid, strid, fpcv)
 	V = (V + V') / 2
@@ -4940,12 +5293,12 @@ void _easi_g_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 		// the elasticities on the expected shares
 		_easi_g_elast(th, al, y, s, p, z, lnx, Q, zm, cix, ao, ystone, np, D0,
 			ki, ko, bidx, didx, R, py, zy, pz, ipz, lgQuant, doESE, doCQ, wt,
-			IFt, IFA, vtype, clid, strid, fpcv, "")
+			IFt, IFA, vtype, clid, strid, fpcv, "", DNg, DDg, GI, DT)
 		if (doMkt) {
 			_easi_g_elast(th, al, y, s, p, z, lnx, Q, zm, cix, ao, ystone, np,
 				D0, ki, ko, bidx, didx, R, py, zy, pz, ipz, lgQuant, doESE, doCQ,
 				wt :* exp(lnx :- max(lnx)), IFt, IFA, vtype, clid, strid, fpcv,
-				"_mkt")
+				"_mkt", DNg, DDg, GI, DT)
 		}
 	}
 
@@ -5140,8 +5493,13 @@ void _easi_g_elast(real colvector th, real rowvector al, real colvector y0,
 	real scalar lgQuant, real scalar doESE, real scalar doCQ,
 	real colvector wt, real matrix IFt, real matrix IFA, real scalar vtype,
 	real colvector clid, real colvector strid, real colvector fpc,
-	string scalar sfx)
+	string scalar sfx, | pointer(real matrix) rowvector DNg,
+	pointer(real matrix) rowvector DDg, real matrix GI, real matrix DT)
 {
+	real matrix KDe
+	real rowvector Nb, Db
+	pointer(real matrix) rowvector Pk
+	real scalar jj
 	real matrix N, D, Np, Dp, Nm, Dm, Al, HS, Gt, Ga, Ts, IFe, Ve, EPRICE, EZ
 	real matrix EPQ, EP, EPS, EPRse, EZse, EPQse
 	real colvector sw, yy, thp, thm, sev
@@ -5157,6 +5515,7 @@ void _easi_g_elast(real colvector th, real rowvector al, real colvector y0,
 		HS, yy)
 	est = _easi_g_est(N, D, off, sw)
 	nE  = cols(est)
+	if (rows(st_numscalar("_easi_ifkeep"))) st_matrix("_easi_ifkeep_e0" + sfx, est)
 	rEP = J; rEZ = rEP + J * J; rEQ = rEZ + T * J
 
 	EI     = est[1..J]
@@ -5174,6 +5533,20 @@ void _easi_g_elast(real colvector th, real rowvector al, real colvector y0,
 		Ts = J(rows(N), nE, .)
 		for (e = 1; e <= nE; e++) {
 			Ts[., e] = _easi_rif(N[., e], D[., e], sw, h)
+		}
+		// pimpute(): the filled prices move N and D (expected shares) of
+		// their households: d(Nbar/Dbar) = sw (dN Dbar - Nbar dD) / Dbar^2
+		if (args() > 34) {
+			if (rows(DT)) {
+				Nb = quadcross(sw, N); Db = quadcross(sw, D)
+				Pk = J(1, cols(DNg), NULL)
+				for (jj = 1; jj <= cols(DNg); jj++) {
+					if (DNg[jj] != NULL) Pk[jj] = &(sw :* ((*DNg[jj]) :* Db -
+						Nb :* (*DDg[jj])) :/ (Db:^2))
+				}
+				KDe = _easi_impapply(Pk, rows(N), nE, GI, DT)
+				Ts  = Ts + KDe
+			}
 		}
 		// the Jacobian in theta (y recomputed from theta)
 		K  = rows(th)
@@ -5210,6 +5583,7 @@ void _easi_g_elast(real colvector th, real rowvector al, real colvector y0,
 			Ga[., j] = (estp - estm)' :/ (2 * h)
 		}
 		IFe = Ts + IFt * Gt' + IFA * Ga'
+		if (rows(st_numscalar("_easi_ifkeep"))) st_matrix("_easi_ifkeep_e" + sfx, IFe)
 		Ve  = _easi_agg(IFe, vtype, clid, strid, fpc)
 		sev = sqrt(diagonal(Ve))
 		EIse  = sev[1::J]'
@@ -5335,9 +5709,14 @@ void _easi_elast(real colvector b, real matrix V, real matrix s, real matrix P,
 	real scalar lgEZ, real scalar lgSE, real scalar lgB, real scalar lgESE,
 	real scalar doESE, real scalar doCQ, real matrix IFb, real scalar vtype,
 	real colvector clid, real colvector strid, real colvector fpc,
-	string scalar sfx)
+	string scalar sfx, | pointer(real matrix) rowvector DN, real matrix GI,
+	real matrix DT)
 {
-	pointer(real matrix) rowvector A
+	pointer(real matrix) rowvector A, Pk
+	real matrix NN0, DD0, KDe
+	real colvector swc, est0
+	real rowvector Dbar
+	real scalar jj
 	real matrix B, Zc, bjk, bjr, gjt, hjt, DD, MAT
 	real matrix EP, EPS, EPQ, EPRICE, EZ, EPse, EPRse, EZse, G, Gfd, Ve, EPQse
 	real matrix Ts, Tb, Gy
@@ -5501,6 +5880,23 @@ void _easi_elast(real colvector b, real matrix V, real matrix s, real matrix P,
 			// G V G' (V is the aggregate of IF(beta)).
 			Ts = _easi_esamp(b, s, P, z, y, wt, Dn2, R, py, zy, pz, ipz,
 				doCQ, est)
+			// pimpute(): the imputation of the prices moves the numerators of
+			// the households whose price was filled
+			if (args() > 24) {
+				if (rows(DT)) {
+					NN0 = .; DD0 = .; est0 = .
+					(void) _easi_esamp(b, s, P, z, y, wt, Dn2, R, py, zy,
+						pz, ipz, doCQ, est0, NN0, DD0)
+					swc  = wt :/ quadsum(wt)
+					Dbar = quadcolsum(swc :* DD0)
+					Pk = J(1, cols(DN), NULL)
+					for (jj = 1; jj <= cols(DN); jj++) {
+						if (DN[jj] != NULL) Pk[jj] = &((swc :* (*DN[jj])) :/ Dbar)
+					}
+					KDe = _easi_impapply(Pk, rows(s), cols(Ts), GI, DT)
+					Ts  = Ts + KDe
+				}
+			}
 			// self-test: the numerators rebuilt for the influence
 			// function give back the point estimates
 			st_numscalar("_easi_esampchk" + sfx, max(abs(est - e0)))
@@ -5510,6 +5906,10 @@ void _easi_elast(real colvector b, real matrix V, real matrix s, real matrix P,
 			if (rows(st_numscalar("_easi_jaccheck"))) st_matrix("_easi_Gy" + sfx, Gy)
 			G  = G + Gy
 			Tb = IFb * G'
+			if (rows(st_numscalar("_easi_ifkeep"))) {
+				st_matrix("_easi_ifkeep_e" + sfx, Ts + Tb)
+				st_matrix("_easi_ifkeep_e0" + sfx, e0')
+			}
 			if (vtype == 0) {
 				Ve = quadcross(Ts, Ts) + quadcross(Ts, Tb)
 				Ve = Ve + Ve' - quadcross(Ts, Ts) + G * V * G'
@@ -5581,9 +5981,14 @@ void _easi_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 	real scalar tol, real scalar maxit, real scalar noisy,
 	string scalar bnm, string scalar Vnm, string scalar Snm,
 	string scalar itnm, string scalar crnm, string scalar cvnm,
-	real scalar doMkt)
+	real scalar doMkt, string scalar lp0vars, string scalar impgvars,
+	real scalar doImp)
 {
 	real matrix s, p, z, np, X, Z, Y, Rr, V, Sigma, B, Aco, Bco, Pu, IFb
+	real matrix LP0, GR, GI, DT, ZZiZX, Si, S0, KD, Pp, Pm, IFb0
+	real colvector b1, rr
+	pointer(real matrix) rowvector Dsc, DN
+	real scalar jj, eps
 	real colvector lnx, ystone, ytil, y, yold, yinst, b, bold, pAp, pBp
 	real colvector wt, clid, strid, fpcv
 	real rowvector ipz, ms
@@ -5663,7 +6068,9 @@ void _easi_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 		}
 	}
 
-	// between passes, rebuild the instrument once
+	// between passes, rebuild the instrument once (b1, the coefficients
+	// that build it, for the influence of the imputation of the prices)
+	if (ph == 1) b1 = b
 	if (ph < nphase) yinst = (ytil :+ 0.5 :* pAp) :/ (1 :- 0.5 :* pBp)
 	}
 
@@ -5680,10 +6087,53 @@ void _easi_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 	}
 
 	_easi_ifb(X, Z, Y, wt, Sigma, b, Pu, IFb)
+
+	// pimpute(): the influence of the imputation of the prices.  The
+	// map of the fills (GI, DT), then, good by good, the derivatives of the
+	// scores and of the numerators of the elasticities in the filled prices
+	// (central differences; each household's depend on its own prices only,
+	// at fixed coefficients, Sigma, first stage and instrument coefficients)
+	DN = J(1, J, NULL); GI = J(0, 0, .); DT = J(0, 4, .)
+	if (doImp & vtype) {
+		LP0 = st_data(., lp0vars, touse)
+		GR  = st_data(., impgvars, touse)
+		_easi_impmap(p, LP0, GR, wt, GI, DT)
+	}
+	if (rows(DT)) {
+		ZZiZX = cholsolve(quadcross(Z, wt, Z), quadcross(Z, wt, X))
+		if (hasmissing(ZZiZX)) ZZiZX = qrsolve(quadcross(Z, wt, Z), quadcross(Z, wt, X))
+		Si = invsym(Sigma)
+		S0 = _easi_impS(b, b1, nphase, Si, ZZiZX, s, p, lnx, z, wt, ms, R, py,
+			zy, pz, ipz, lgQuant, k)
+		st_numscalar("_easi_imp_schk", mreldif(S0 * Pu', IFb))
+		Dsc = J(1, J, NULL)
+		eps = 1e-5
+		for (jj = 1; jj <= J; jj++) {
+			rr = selectindex(GI[., jj] :> 0)
+			if (rows(rr) == 0) continue
+			Pp = p; Pp[rr, jj] = Pp[rr, jj] :+ eps
+			Pm = p; Pm[rr, jj] = Pm[rr, jj] :- eps
+			Dsc[jj] = &((_easi_impS(b, b1, nphase, Si, ZZiZX, s, Pp, lnx, z, wt,
+				ms, R, py, zy, pz, ipz, lgQuant, k) - _easi_impS(b, b1, nphase,
+				Si, ZZiZX, s, Pm, lnx, z, wt, ms, R, py, zy, pz, ipz, lgQuant,
+				k)) :/ (2 * eps))
+			DN[jj] = &((_easi_impNN(b, s, Pp, z, lnx, wt, R, py, zy, pz, ipz,
+				lgQuant, lgEZ, lgB, doCQ) - _easi_impNN(b, s, Pm, z, lnx, wt, R,
+				py, zy, pz, ipz, lgQuant, lgEZ, lgB, doCQ)) :/ (2 * eps))
+		}
+		KD   = _easi_impapply(Dsc, n, cols(S0), GI, DT)
+		IFb0 = IFb
+		IFb  = IFb + KD * Pu'
+		V = V + _easi_agg(IFb, vtype, clid, strid, fpcv) -
+			_easi_agg(IFb0, vtype, clid, strid, fpcv)
+		V = (V + V') / 2
+	}
+	if (rows(st_numscalar("_easi_ifkeep"))) st_matrix("_easi_ifkeep_b", IFb)
+
 	// the elasticities of the households: every mean weighted by the
 	// weight of the estimation
 	_easi_elast(b, V, s, p, z, y, wt, R, py, zy, pz, ipz, lgEZ, lgSE, lgB,
-		lgESE, doESE, doCQ, IFb, vtype, clid, strid, fpcv, "")
+		lgESE, doESE, doCQ, IFb, vtype, clid, strid, fpcv, "", DN, GI, DT)
 	// the elasticities of the market, from the same estimation: every mean
 	// weighted by the weight times the total expenditure, which makes each
 	// one a ratio of totals -- the elasticity of the total demand of the
@@ -5692,7 +6142,7 @@ void _easi_run(string scalar svars, string scalar lpvars, string scalar lxvar,
 	if (doMkt) {
 		_easi_elast(b, V, s, p, z, y, wt :* exp(lnx :- max(lnx)), R, py,
 			zy, pz, ipz, lgEZ, lgSE, lgB, lgESE, doESE, doCQ, IFb, vtype,
-			clid, strid, fpcv, "_mkt")
+			clid, strid, fpcv, "_mkt", DN, GI, DT)
 	}
 
 	st_matrix(bnm, b')
