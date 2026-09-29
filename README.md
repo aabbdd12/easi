@@ -110,7 +110,7 @@ clean run of `replication/master.do` is the statement that the note reproduces.
 If you use `easi`, please cite the technical note,
 
 Araar, A. (2026). *Estimating the Exact Affine Stone Index demand system:
-the easi Stata module*. Zenodo. https://doi.org/10.5281/zenodo.23012510
+the easi Stata module*. Zenodo. https://doi.org/10.5281/zenodo.23042262
 
 (version 2.0.0; the DOI 10.5281/zenodo.22914058 covers all versions and
 resolves to the latest one — see `CITATION.cff`), and the model's paper,
