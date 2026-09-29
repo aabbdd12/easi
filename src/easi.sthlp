@@ -831,7 +831,9 @@ Files written by the examples go to Stata's temporary folder.  The links call
 
 {pstd}A household in ten buys no corn, one in six no wheat.  The diagnostic runs the probits first, with the age
 and the sex of the head in the probits only; the system is then estimated on all the households with the expected
-shares, and a bootstrap of the whole procedure gives the standard errors again (about two minutes).{p_end}
+shares.  On these data delta is weakly identified (VIF(delta) above 10: it rests mostly on the curvature of the
+probit), and easi warns so after the estimation with {cmd:vce(svy)}; this is expected here.  A bootstrap of the
+whole procedure then gives standard errors that take it into account (about two minutes).{p_end}
 {phang2}{cmd:. sysuse mex_bench, clear}{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3 [pw = sweight], lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) selvars(age isMale)}{p_end}
 {phang2}{cmd:. easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) vce(svy) selvars(age isMale)}{p_end}

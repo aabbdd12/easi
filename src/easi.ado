@@ -2023,9 +2023,17 @@ program _easi_seltable
 		   as res %5.3f e(sel_ycomp_mean) / e(sel_ycomp_sd) as txt " sd of y"
 	}
 	if "`wvif'" != "" {
-		di as err "warning:`wvif': delta is weakly identified; leave the good uncorrected"
-		di as err "  with selgoods(), add a variable of the probit only in selvars(), or use"
-		di as err "  vce(bootstrap)"
+		* under vce(bootstrap) the remedy is already applied: a note, not a
+		* warning
+		if "`e(vce)'" == "bootstrap" {
+			di as txt "note:`wvif': delta is weakly identified (VIF(delta) above 10); the"
+			di as txt "  bootstrap standard errors take it into account"
+		}
+		else {
+			di as err "warning:`wvif': delta is weakly identified; leave the good uncorrected"
+			di as err "  with selgoods(), add a variable of the probit only in selvars(), or use"
+			di as err "  vce(bootstrap)"
+		}
 	}
 	if `wper' di as err "warning: some probits predict purchase perfectly for some households"
 end
