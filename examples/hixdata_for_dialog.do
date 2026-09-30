@@ -8,14 +8,20 @@
 *!
 *! This exponentiates them once so the dialog has something to work with, and
 *! checks that the result is identical to the log-based command.
+*!
+*! Run it from the folder where "ssc install easi, all" (or "net get easi")
+*! copied it with hixdata.dta; hixdata_levels.dta is written to that folder.
 
 clear all
 set more off
 
-local ROOT "C:/Users/aabd/OneDrive/Desktop/EASI_project"
-adopath ++ "`ROOT'/src"
-
-use "`ROOT'/examples/hixdata.dta", clear
+capture confirm file "hixdata.dta"
+if _rc {
+	di as err "hixdata.dta is not in the current folder: copy it with"
+	di as err "  ssc install easi, all replace   (or net get easi)"
+	exit 601
+}
+use hixdata, clear
 
 local SH sfoodh sfoodr srent soper sfurn scloth stranop srecr spers
 local LP pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers
@@ -58,9 +64,9 @@ matrix B = e(elast_exp)
 mata: st_numscalar("d", max(abs(st_matrix("A") - st_matrix("B"))))
 di ""
 di as txt "  lnprices() path vs prices() path, max difference" _col(56)	///
-   as res %11.3e d _col(70) as res cond(d < 1e-10, "ok", "ECHEC")
+   as res %11.3e d _col(70) as res cond(d < 1e-10, "ok", "FAIL")
 
-qui save "`ROOT'/examples/hixdata_levels.dta", replace
+qui save "hixdata_levels.dta", replace
 di ""
-di as txt "  saved: examples/hixdata_levels.dta"
+di as txt "  saved: hixdata_levels.dta (current folder)"
 di as txt "{hline 70}"

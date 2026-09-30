@@ -52,7 +52,8 @@ is all of them; implies {opt pz}{p_end}
 {synopt:{opt pim:pute(varlist)}}fill a missing price by the mean log price of the same group, the groups tried in order{p_end}
 {synopt:{opt sel:ection}}correct for the households that do not buy (Shonkwiler and Yen 1999){p_end}
 {synopt:{opt selg:oods(namelist)}}the shares corrected; default: those with zeros, the last good excepted; implies {opt selection}{p_end}
-{synopt:{cmdab:selv:ars(}[{it:good}{cmd::}] {it:varlist} [{cmd:;} ...]{cmd:)}}variables of the probits only, for every corrected good or for one good; implies {opt selection}{p_end}
+{synopt:{cmdab:selv:ars(}[{it:good}{cmd::}] {it:varlist} [{cmd:;} ...]{cmd:)}}variables of the probits only,
+for every corrected good or for one good; implies {opt selection}{p_end}
 
 {syntab:SE/Robust}
 {synopt:{opt vce(vcetype)}}{opt r:obust} (default), {opt cl:uster}
@@ -726,10 +727,13 @@ included.  Not available with {opt compat}.
 {marker examples}{title:Examples}
 
 {pstd}
-The examples use the two data sets installed with the package: the Canadian
-data of Lewbel and Pendakur (2009) ({cmd:sysuse hixdata}: nine goods, prices
-and expenditure in logarithms) and the Mexican cereals ({cmd:sysuse mex_bench}:
-three goods, a stratified two-stage design already {helpb svyset}).  Each one
+The examples use the two data sets that come with the package as ancillary
+files: the Canadian data of Lewbel and Pendakur (2009) ({cmd:hixdata.dta}: nine
+goods, prices and expenditure in logarithms) and the Mexican cereals
+({cmd:mex_bench.dta}: three goods, a stratified two-stage design already
+{helpb svyset}).  {stata "ssc install easi, all replace"} (or {cmd:net get easi})
+copies them into the current folder; the links read them from there, else from
+the SSC archive, else from GitHub, and write nothing to disk.  Each one
 runs from its blue links: in the command window, as a do-file opened in the
 Do-file Editor, and, except the fifth (commands after an estimation), in the
 dialog box (filled in, prices and expenditure in levels; click OK).  The data in memory are not lost: the command window and the do-file give
@@ -740,7 +744,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 
 {title:Example 1: The Canadian data of Lewbel and Pendakur (2009)}
 
-{phang2}{cmd:. sysuse hixdata, clear}{p_end}
+{phang2}{cmd:. use hixdata, clear}{p_end}
 {phang2}{cmd:. easi sfoodh sfoodr srent soper sfurn scloth stranop srecr spers,}
 {cmd:lnprices(pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers) lnexpenditure(log_y)}
 {cmd:demographics(age hsex carown) power(3)}{p_end}
@@ -752,7 +756,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {title:Example 2: The specification of Lewbel and Pendakur (2009)}
 
 {pstd}Power 5 and all the interactions; about ten seconds.{p_end}
-{phang2}{cmd:. sysuse hixdata, clear}{p_end}
+{phang2}{cmd:. use hixdata, clear}{p_end}
 {phang2}{cmd:. easi sfoodh sfoodr srent soper sfurn scloth stranop srecr spers,}
 {cmd:lnprices(pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers) lnexpenditure(log_y)}
 {cmd:demographics(age hsex carown time tran) power(5) py zy pz}{p_end}
@@ -763,7 +767,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {title:Example 3: Survey design (Mexican cereals)}
 
 {pstd}The design is read from {helpb svyset}: PSUs within strata, the sampling weight.{p_end}
-{phang2}{cmd:. sysuse mex_bench, clear}{p_end}
+{phang2}{cmd:. use mex_bench, clear}{p_end}
 {phang2}{cmd:. svyset}{p_end}
 {phang2}{cmd:. easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) py vce(svy) stars}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 3":example 3: click to run in command window}){p_end}
@@ -773,7 +777,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {title:Example 4: Reproduce the R package easi 0.21}
 
 {pstd}{opt compat} reproduces the R package, and results published with {helpb sr_easi}, bit for bit.{p_end}
-{phang2}{cmd:. sysuse hixdata, clear}{p_end}
+{phang2}{cmd:. use hixdata, clear}{p_end}
 {phang2}{cmd:. easi sfoodh sfoodr srent soper sfurn scloth stranop srecr spers,}
 {cmd:lnprices(pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers) lnexpenditure(log_y)}
 {cmd:demographics(age hsex carown time tran) power(5) py zy pz compat}{p_end}
@@ -784,7 +788,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {title:Example 5: After estimation}
 
 {pstd}Fitted shares, the implicit utility index and the Engel curves; run from its link, the example writes the curves to Stata's temporary folder.{p_end}
-{phang2}{cmd:. sysuse hixdata, clear}{p_end}
+{phang2}{cmd:. use hixdata, clear}{p_end}
 {phang2}{cmd:. easi sfoodh sfoodr srent soper sfurn scloth stranop srecr spers,}
 {cmd:lnprices(pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers) lnexpenditure(log_y)}
 {cmd:demographics(age hsex carown) power(3) notable}{p_end}
@@ -797,7 +801,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {title:Example 6: The tables in a file}
 
 {pstd}The extension of {opt saveres()} gives the format: Word, Excel, LaTeX, CSV or Markdown.{p_end}
-{phang2}{cmd:. sysuse hixdata, clear}{p_end}
+{phang2}{cmd:. use hixdata, clear}{p_end}
 {phang2}{cmd:. easi sfoodh sfoodr srent soper sfurn scloth stranop srecr spers,}
 {cmd:lnprices(pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers) lnexpenditure(log_y)}
 {cmd:demographics(age hsex carown) power(3) compensated notable saveres(tables.docx)}{p_end}
@@ -809,7 +813,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {title:Example 7: Diagnose a specification before estimating it}
 
 {pstd}The same specification with raw and with centred logarithms: {helpb easidiag} predicts the slow convergence of the first.{p_end}
-{phang2}{cmd:. sysuse mex_bench, clear}{p_end}
+{phang2}{cmd:. use mex_bench, clear}{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1_raw lp2_raw lp3) lnexpenditure(lx_raw) demographics(z1 z2) power(3)}{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3)}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 7":example 7: click to run in command window}){p_end}
@@ -819,7 +823,7 @@ Files written by the examples go to Stata's temporary folder.  The links call
 {title:Example 8: The elasticities of the households, of the market and of the individuals}
 
 {pstd}The same estimation gives those of the households (the default) and of the market; {opt hhsize()} gives those of the individuals.{p_end}
-{phang2}{cmd:. sysuse mex_bench, clear}{p_end}
+{phang2}{cmd:. use mex_bench, clear}{p_end}
 {phang2}{cmd:. easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) py vce(svy)}{p_end}
 {phang2}{cmd:. easi, elasticities(market)}{p_end}
 {phang2}{cmd:. easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) py vce(svy) hhsize(hhsize)}{p_end}
@@ -834,7 +838,7 @@ and the sex of the head in the probits only; the system is then estimated on all
 shares.  On these data delta is weakly identified (VIF(delta) above 10: it rests mostly on the curvature of the
 probit), and easi warns so after the estimation with {cmd:vce(svy)}; this is expected here.  A bootstrap of the
 whole procedure then gives standard errors that take it into account (about two minutes).{p_end}
-{phang2}{cmd:. sysuse mex_bench, clear}{p_end}
+{phang2}{cmd:. use mex_bench, clear}{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3 [pw = sweight], lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) selvars(age isMale)}{p_end}
 {phang2}{cmd:. easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) vce(svy) selvars(age isMale)}{p_end}
 {phang2}{cmd:. predict double Ew*, shares}{p_end}
@@ -909,7 +913,8 @@ unless {opt compensated} was specified{p_end}
 {synopt:{cmd:e(elast_exp_mkt)}, ...}the market elasticities and their standard errors, with the names above
 followed by {cmd:_mkt} ({cmd:e(elast_exp_mkt_se)}...); not after {cmd:individuals} or under {opt compat}{p_end}
 {synopt:{cmd:e(Sigma)}}cross-equation residual covariance{p_end}
-{synopt:{cmd:e(sel_alpha)}}probit coefficients by good: constant, ln {it:p}, demographics, {opt selvars()} (missing where a variable does not enter or the good is not corrected){p_end}
+{synopt:{cmd:e(sel_alpha)}}probit coefficients by good: constant, ln {it:p}, demographics, {opt selvars()}
+(missing where a variable does not enter or the good is not corrected){p_end}
 {synopt:{cmd:e(sel_diag)}}by good: percentage of buyers, pseudo-R2, perfectly predicted, VIF(delta){p_end}
 {synopt:{cmd:e(V_sel)}}variance of the coefficients and of the probits together ({cmd:estat engel}){p_end}
 

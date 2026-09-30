@@ -39,9 +39,7 @@ f src/sr_easi_estat.ado
 f src/_easi_tabstars.ado
 f src/_easi_pimpute.ado
 f src/easi_examples.ado
-F examples/hixdata.dta
 f examples/hixdata.dta
-F examples/mex_bench.dta
 f examples/mex_bench.dta
 f examples/easi_tour.do
 f examples/mex_tour.do

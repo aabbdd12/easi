@@ -182,9 +182,10 @@ it is 33 for corn and about 2,000 for wheat.
 {p 4 4 2}The same specification, with a survey weight:{p_end}
 {phang2}{cmd:. easidiag w1-w9 [pw=sweight], prices(p1-p9) expenditure(totexp) demographics(age hsex) power(3)}{p_end}
 
-{p 4 4 2}On the Mexican cereals installed with the package, raw and centred
-logarithms (the example 7 of {helpb easi}):{p_end}
-{phang2}{cmd:. sysuse mex_bench, clear}{p_end}
+{p 4 4 2}On the Mexican cereals that come with the package (an ancillary file;
+see the examples of {helpb easi}), raw and centred logarithms (the example 7
+of {helpb easi}):{p_end}
+{phang2}{cmd:. use mex_bench, clear}{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1_raw lp2_raw lp3) lnexpenditure(lx_raw) demographics(z1 z2) power(3)}{p_end}
 {phang2}{cmd:. easidiag w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3)}{p_end}
 {p 8 8 2}{txt}({stata "easi_examples 7":click to run in command window}){p_end}

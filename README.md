@@ -29,8 +29,9 @@ within Stata and Mata. No R, no external dependency.
   `e()` results;
 * tables with significance stars (`stars`), written to Word, Excel, LaTeX, CSV
   or Markdown (`saveres()`);
-* examples that run from their links in the help (`easi_examples`), the data
-  installed with the package (`sysuse hixdata`, `sysuse mex_bench`);
+* examples that run from their links in the help (`easi_examples`); the
+  example data (`hixdata.dta`, `mex_bench.dta`) are ancillary files, read from
+  the current folder, else from the SSC archive or GitHub;
 * `easidiag`, a pre-estimation diagnostic that finds the causes of slow or
   failed convergence — near-collinearity, near-zero variance, sparse
   categories — and, with `selection`, weak identification of the correction,
@@ -54,15 +55,17 @@ number in it.
 
 ```stata
 net install easi, from("https://raw.githubusercontent.com/aabbdd12/easi/main") replace
-net get easi          // optional: the examples
+net get easi, from("https://raw.githubusercontent.com/aabbdd12/easi/main") replace
 ```
 
-Stata 14.2 or later.
+The second line copies the example data and the tours into the current
+folder (optional: the examples of the help read the data online when they
+are not there).  Stata 14.2 or later.
 
 ## Quick start
 
 ```stata
-sysuse hixdata, clear
+use hixdata, clear
 easi sfoodh sfoodr srent soper sfurn scloth stranop srecr spers,           ///
      lnprices(pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers)  ///
      lnexpenditure(log_y) demographics(age hsex carown time tran)          ///
@@ -72,7 +75,7 @@ predict double shat*, shares
 estat engel
 
 * with a survey design (mex_bench is already svyset)
-sysuse mex_bench, clear
+use mex_bench, clear
 easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) vce(svy)
 easi, elasticities(market)          // the total demand, same estimation
 easi w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) vce(svy) hhsize(hhsize)

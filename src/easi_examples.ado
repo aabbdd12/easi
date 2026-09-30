@@ -9,6 +9,9 @@
 *! replace data of the user that have unsaved changes (the example data it
 *! loads are marked and can be replaced). Files written by the examples go to
 *! Stata's temporary folder, c(tmpdir), never to the working folder.
+*! The example data are ancillary files: they are read from the current
+*! folder (where "ssc install easi, all" or "net get easi" copies them), else
+*! from the SSC archive, else from GitHub (_easi_exload); nothing is written.
 program define easi_examples
 	version 14.2
 	syntax anything(name=ex id="example number") [, DB DO NOEDIT]
@@ -26,13 +29,13 @@ program define easi_examples
 	if substr("`T'", -1, 1) != "/" local T "`T'/"
 	* the Canadian data of Lewbel and Pendakur (2009), prices and expenditure
 	* in logarithms, and the Mexican cereals (ENIGH 2014) with their design,
-	* both installed with the package (sysuse)
+	* both ancillary files of the package (see _easi_exload)
 	local SH "sfoodh sfoodr srent soper sfurn scloth stranop srecr spers"
 	local PR "pfoodh pfoodr prent poper pfurn pcloth ptranop precr ppers"
 	local H "`SH', lnprices(`PR') lnexpenditure(log_y)"
 	local HZ "age hsex carown time tran"
 	local M "w1 w2 w3, lnprices(lp1 lp2 lp3) lnexpenditure(lx)"
-	local data "sysuse hixdata, clear"
+	local data "hixdata"
 	local n 0
 	if `ex' == 1 {
 		local title "The Canadian data of Lewbel and Pendakur (2009)"
@@ -46,7 +49,7 @@ program define easi_examples
 		local n 1
 	}
 	else if `ex' == 3 {
-		local data "sysuse mex_bench, clear"
+		local data "mex_bench"
 		local title "Survey design (Mexican cereals): the variance of the design"
 		local c1 "svyset"
 		local c2 "easi `M' demographics(z1 z2) power(3) py vce(svy) stars"
@@ -73,14 +76,14 @@ program define easi_examples
 		local n 2
 	}
 	else if `ex' == 7 {
-		local data "sysuse mex_bench, clear"
+		local data "mex_bench"
 		local title "Diagnose a specification before estimating it"
 		local c1 "easidiag w1 w2 w3, lnprices(lp1_raw lp2_raw lp3) lnexpenditure(lx_raw) demographics(z1 z2) power(3)"
 		local c2 "easidiag `M' demographics(z1 z2) power(3)"
 		local n 2
 	}
 	else if `ex' == 8 {
-		local data "sysuse mex_bench, clear"
+		local data "mex_bench"
 		local title "The elasticities of the households, of the market and of the individuals"
 		local c1 "easi `M' demographics(z1 z2) power(3) py vce(svy)"
 		local c2 "easi, elasticities(market)"
@@ -88,7 +91,7 @@ program define easi_examples
 		local n 3
 	}
 	else if `ex' == 9 {
-		local data "sysuse mex_bench, clear"
+		local data "mex_bench"
 		local title "The households that do not buy: the selection of the buyers"
 		local SV "selvars(age isMale)"
 		local c1 "easidiag w1 w2 w3 [pw = sweight], lnprices(lp1 lp2 lp3) lnexpenditure(lx) demographics(z1 z2) power(3) `SV'"
@@ -110,7 +113,12 @@ program define easi_examples
 		file write `fh' "* preserve keeps the data in memory and gives them back when this do-file ends;" _n
 		file write `fh' "* delete that line to keep working on the example data." _n
 		file write `fh' "preserve" _n
-		file write `fh' "`data'" _n
+		file write `fh' "* the example data: the current folder (where ssc install easi, all copies" _n
+		file write `fh' "* them), else the SSC archive, else GitHub" _n
+		local l = substr("`data'", 1, 1)
+		file write `fh' `"capture use `data', clear"' _n
+		file write `fh' `"if _rc capture use "http://fmwww.bc.edu/repec/bocode/`l'/`data'.dta", clear"' _n
+		file write `fh' `"if _rc use "https://raw.githubusercontent.com/aabbdd12/easi/main/examples/`data'.dta", clear"' _n
 		forvalues i = 1/`n' {
 			file write `fh' `"`c`i''"' _n
 		}
@@ -136,7 +144,7 @@ program define easi_examples
 			di as err "save them (or clear) first: the dialog box needs the example data in memory"
 			exit 4
 		}
-		qui `data'
+		_easi_exload `data'
 		* the logs of the example, and their levels for the dialog
 		if inlist(`ex', 1, 2, 4, 6) {
 			local LP `PR'
@@ -247,12 +255,44 @@ program define easi_examples
 
 	* ---- in the command window: the data in memory are kept ----
 	preserve
-	qui `data'
+	_easi_exload `data'
+	local src "`r(source)'"
 	di as txt _n "{hline 78}" _n "easi, example `ex': " as res "`title'" _n as txt "{hline 78}"
-	di as txt `"(example data: `data'; the data in memory come back at the end)"'
+	di as txt `"(example data: `data'.dta, read from `src'; the data in memory come back at the end)"'
 	forvalues i = 1/`n' {
 		di as txt _n `". `c`i''"'
 		`c`i''
 	}
 	if inlist(`ex', 5, 6) di as txt _n `"(files written to `T')"'
+end
+
+* ============================================================================
+* the data of an example, an ancillary file of the package: from the current
+* folder (where "ssc install easi, all" or "net get easi" copies it), else
+* from the SSC archive, else from GitHub; nothing is written to disk
+program define _easi_exload, rclass
+	args f
+	capture confirm file "`f'.dta"
+	if !_rc {
+		quietly use "`f'.dta", clear
+		return local source "the current folder"
+		exit
+	}
+	local l = substr("`f'", 1, 1)
+	capture quietly use "http://fmwww.bc.edu/repec/bocode/`l'/`f'.dta", clear
+	if !_rc {
+		return local source "the SSC archive"
+		exit
+	}
+	capture quietly use "https://raw.githubusercontent.com/aabbdd12/easi/main/examples/`f'.dta", clear
+	if !_rc {
+		return local source "GitHub"
+		exit
+	}
+	di as err "easi_examples: `f'.dta is not in the current folder (`c(pwd)'),"
+	di as err "  and neither the SSC archive nor GitHub could be reached."
+	di as txt "  Copy the example data into the current folder with"
+	di as txt `"  {stata "ssc install easi, all replace"} (from SSC), or"'
+	di as txt `"  {stata "net get easi, from(https://raw.githubusercontent.com/aabbdd12/easi/main)"} (from GitHub)."'
+	exit 601
 end
