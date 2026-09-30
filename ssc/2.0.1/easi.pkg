@@ -1,0 +1,60 @@
+v 3
+d 'EASI': module to estimate the Exact Affine Stone Index demand system
+d
+d  easi estimates the Exact Affine Stone Index (EASI) implicit Marshallian
+d  demand system of Lewbel and Pendakur (2009) within Stata and Mata, by
+d  iterated linear three-stage least squares with Slutsky symmetry imposed.
+d  It reports expenditure, compensated and uncompensated price, and
+d  demographic elasticities for the households, the individuals or the
+d  market, with standard errors from the influence functions of the whole
+d  procedure; sampling weights, robust, cluster and survey-design (svyset)
+d  variance, and a design bootstrap. The households that do not buy some
+d  goods are handled by imputing their missing prices (pimpute) and by the
+d  Shonkwiler-Yen correction for censoring (selection), both carried into the
+d  standard errors. easidiag diagnoses the data before estimation; predict
+d  and estat engel give the Engel curves; tables with significance stars can
+d  be written to Word, LaTeX, Excel, CSV or Markdown; a dialog box and help
+d  examples run from clickable links are included. sr_easi is kept as a
+d  backward-compatible wrapper. A technical note documents the model, the
+d  estimator and the validation of the standard errors; it is included as an
+d  ancillary file (easi_technical_note.pdf) and on Zenodo:
+d  https://doi.org/10.5281/zenodo.22914058
+d
+d KW: demand system
+d KW: EASI
+d KW: Exact Affine Stone Index
+d KW: price elasticities
+d KW: household survey
+d KW: censoring
+d KW: survey design
+d KW: three-stage least squares
+d
+d Requires: Stata version 14.2
+d
+d Distribution-Date: 20260930
+d
+d Author: Abdelkrim Araar, Universite Laval and Partnership for Economic Policy (PEP)
+d Support: email aabd@ecn.ulaval.ca
+d
+d (A copy of the package as submitted to the SSC archive, version 2.0.1, to
+d test it before SSC publishes it: the example data, the tours and the
+d technical note are ancillary files, copied to the current folder by net get.)
+d
+f easi.ado
+f easi_p.ado
+f easi_estat.ado
+f easi.sthlp
+f easi.dlg
+f easidiag.ado
+f easidiag.sthlp
+f sr_easi.ado
+f sr_easi_estat.ado
+f _easi_tabstars.ado
+f _easi_pimpute.ado
+f easi_examples.ado
+f hixdata.dta
+f mex_bench.dta
+f easi_tour.do
+f mex_tour.do
+f hixdata_for_dialog.do
+f easi_technical_note.pdf
